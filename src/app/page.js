@@ -18,7 +18,7 @@ export default function Home() {
             Welcome to FalconSphere!
           </h1>
           <p className="text-[#FFD700] text-lg">
-            Become the academic weapon.
+            Become the academic weapon
           </p>
         </div>
       </nav>
