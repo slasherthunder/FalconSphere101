@@ -1,127 +1,275 @@
 "use client";
+
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 export default function CreateSet() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [flashcards, setFlashcards] = useState([{ term: "", definition: "" }]);
+  const [slides, setSlides] = useState([
+    {
+      question: "What is the capital of Russia?",
+      options: ["Moscow", "Romania", "St. Petersburg", "Macedonia"],
+      correctAnswer: "Moscow",
+      image: null,
+    },
+  ]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
-  // Add a new flashcard
-  const addFlashcard = () => {
-    setFlashcards([...flashcards, { term: "", definition: "" }]);
+  const handleAddOption = () => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].options.push("");
+    setSlides(updatedSlides);
   };
 
-  // Remove a flashcard
-  const removeFlashcard = (index) => {
-    setFlashcards(flashcards.filter((_, i) => i !== index));
+  const handleOptionChange = (index, value) => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].options[index] = value;
+    setSlides(updatedSlides);
   };
 
-  // Handle flashcard input changes
-  const handleFlashcardChange = (index, field, value) => {
-    const updatedFlashcards = [...flashcards];
-    updatedFlashcards[index][field] = value;
-    setFlashcards(updatedFlashcards);
+  const handleOptionRemove = (index) => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].options.splice(index, 1);
+    setSlides(updatedSlides);
   };
 
-  // Handle form submission
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const updatedSlides = [...slides];
+        updatedSlides[currentSlideIndex].image = reader.result;
+        setSlides(updatedSlides);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].image = null;
+    setSlides(updatedSlides);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) {
-      alert("Please fill in all fields!");
-      return;
-    }
+    // Handle form submission, e.g., save the question and options
+    console.log(slides);
+  };
 
-    console.log("Set Created:", { title, description, flashcards });
-    alert("Study Set Created Successfully!");
+  const handleNextSlide = () => {
+    if (currentSlideIndex < slides.length - 1) {
+      setCurrentSlideIndex(currentSlideIndex + 1);
+    }
+  };
+
+  const handlePreviousSlide = () => {
+    if (currentSlideIndex > 0) {
+      setCurrentSlideIndex(currentSlideIndex - 1);
+    }
+  };
+
+  const handleAddSlide = () => {
+    setSlides([
+      ...slides,
+      {
+        question: "",
+        options: ["", "", "", ""],
+        correctAnswer: "",
+        image: null,
+      },
+    ]);
+    setCurrentSlideIndex(slides.length);
   };
 
   return (
-    <div className="min-h-screen bg-[#8B0000] py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-[#FFD700] mb-4">Create a New Set</h1>
-        <form className="bg-[#FFD700] p-6 rounded-lg shadow-md" onSubmit={handleSubmit}>
-          {/* Title Input */}
-          <div className="mb-4">
-            <label className="block text-[#8B0000] font-semibold mb-2" htmlFor="title">
-              Set Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-[#8B0000] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-              placeholder="Enter a title for your set"
-            />
-          </div>
+    <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
+      <div className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-6xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+          <h2 className="text-4xl text-[#FFD700] font-bold">Create New Set</h2>
+        </div>
 
-          {/* Description Input */}
-          <div className="mb-4">
-            <label className="block text-[#8B0000] font-semibold mb-2" htmlFor="description">
-              Description
-            </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border border-[#8B0000] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-              placeholder="Describe your set"
-              rows="4"
-            />
-          </div>
+        {/* Display the current slide number out of total slides */}
+        <div className="mb-6">
+          <span className="text-xl text-[#FFD700]">
+            Slide {currentSlideIndex + 1} of {slides.length}
+          </span>
+        </div>
 
-          {/* Flashcards Section */}
-          <h2 className="text-xl font-semibold text-[#FFD700] mb-4">Flashcards</h2>
-          {flashcards.map((flashcard, index) => (
-            <div key={index} className="mb-4 p-4 bg-[#8B0000] rounded-lg">
-              <div className="flex gap-2">
-                {/* Term Input */}
-                <input
-                  type="text"
-                  value={flashcard.term}
-                  onChange={(e) => handleFlashcardChange(index, "term", e.target.value)}
-                  className="w-1/2 px-4 py-2 border border-[#FFD700] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000]"
-                  placeholder="Term"
-                />
-                {/* Definition Input */}
-                <input
-                  type="text"
-                  value={flashcard.definition}
-                  onChange={(e) => handleFlashcardChange(index, "definition", e.target.value)}
-                  className="w-1/2 px-4 py-2 border border-[#FFD700] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000]"
-                  placeholder="Definition"
-                />
-                {/* Remove Button */}
-                {flashcards.length > 1 && (
+        <div className="flex flex-col sm:flex-row gap-8">
+          {/* Preview Section */}
+          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
+            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Preview</h2>
+            <div className="space-y-4">
+              <div className="text-[#FFD700] text-lg font-semibold">
+                {slides[currentSlideIndex].question}
+              </div>
+              {slides[currentSlideIndex].image && (
+                <div className="w-full h-48 overflow-hidden rounded relative">
+                  <img
+                    src={slides[currentSlideIndex].image}
+                    alt="Question"
+                    className="w-full h-full object-cover"
+                  />
                   <button
                     type="button"
-                    onClick={() => removeFlashcard(index)}
-                    className="bg-red-500 text-yellow px-3 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 text-[#FFD700] text-xl"
                   >
-                    ✕
+                    ×
                   </button>
-                )}
+                </div>
+              )}
+              <div className="space-y-2">
+                {slides[currentSlideIndex].options.map((option, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center p-3 rounded-lg border border-[#FFD700] ${
+                      option === slides[currentSlideIndex].correctAnswer
+                        ? "bg-[#FFD700] text-[#8B0000]"
+                        : "bg-[#500000] text-[#FFD700]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="preview-answer"
+                      value={option}
+                      checked={option === slides[currentSlideIndex].correctAnswer}
+                      readOnly
+                      className="form-radio h-5 w-5 text-[#FFD700] border-2 border-[#FFD700]"
+                    />
+                    <span className="ml-3 text-lg">{option}</span>
+
+                    {/* Move Remove Option Button inside */}
+                    <button
+                      type="button"
+                      onClick={() => handleOptionRemove(index)}
+                      className="absolute top-1 right-1 text-[#FFD700] text-xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          </div>
 
-          {/* Add Flashcard Button */}
-          <button
-            type="button"
-            onClick={addFlashcard}
-            className="bg-[#8B0000] text-[#FFD700] px-4 py-2 rounded-lg font-semibold hover:bg-[#6A0000] transition-colors"
-          >
-            + Add Flashcard
-          </button>
+          {/* Edit Section */}
+          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
+            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Edit Set</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-[#FFD700] font-medium mb-2">Question:</label>
+                <input
+                  type="text"
+                  value={slides[currentSlideIndex].question}
+                  onChange={(e) => {
+                    const updatedSlides = [...slides];
+                    updatedSlides[currentSlideIndex].question = e.target.value;
+                    setSlides(updatedSlides);
+                  }}
+                  className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                  placeholder="Enter question"
+                />
+              </div>
+              <div>
+                <label className="block text-[#FFD700] font-medium mb-2">Image:</label>
+                {slides[currentSlideIndex].image ? (
+                  <div className="w-full h-48 overflow-hidden rounded relative">
+                    <img
+                      src={slides[currentSlideIndex].image}
+                      alt="Selected Image"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 text-[#FFD700] text-xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="file"
+                    onChange={handleImageChange}
+                    className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="block text-[#FFD700] font-medium mb-2">Options:</label>
+                {slides[currentSlideIndex].options.map((option, index) => (
+                  <div key={index} className="flex items-center mb-2 relative">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => handleOptionChange(index, e.target.value)}
+                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                      placeholder={`Option ${index + 1}`}
+                    />
+                    {/* Remove Option Button inside the box */}
+                    <button
+                      type="button"
+                      onClick={() => handleOptionRemove(index)}
+                      className="absolute top-1 right-1 text-[#FFD700] text-xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleAddOption}
+                  className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
+                >
+                  Add Option
+                </button>
+              </div>
+              <div>
+                <label className="block text-[#FFD700] font-medium mb-2">Correct Answer:</label>
+                <select
+                  value={slides[currentSlideIndex].correctAnswer}
+                  onChange={(e) => {
+                    const updatedSlides = [...slides];
+                    updatedSlides[currentSlideIndex].correctAnswer = e.target.value;
+                    setSlides(updatedSlides);
+                  }}
+                  className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                >
+                  <option value="">Select correct answer</option>
+                  {slides[currentSlideIndex].options.map((option, index) => (
+                    <option key={index} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
+              >
+                Save Set
+              </button>
+            </form>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="bg-[#8B0000] text-[#FFD700] px-6 py-2 rounded-lg font-semibold hover:bg-[#6A0000] transition-colors mt-6 w-full"
-          >
-            Create Set
-          </button>
-        </form>
+            {/* Navigation Arrows */}
+            <div className="absolute top-1/2 left-4 transform -translate-y-1/2 cursor-pointer" onClick={handlePreviousSlide}>
+              <span className="text-4xl text-[#FFD700]">←</span>
+            </div>
+            <div className="absolute top-1/2 right-4 transform -translate-y-1/2 cursor-pointer" onClick={handleNextSlide}>
+              <span className="text-4xl text-[#FFD700]">→</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddSlide}
+              className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110 mt-6"
+            >
+              Add Slide
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
