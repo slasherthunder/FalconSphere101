@@ -3,7 +3,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 AC/DC coders click on the app folder and then src; you will find all of the files.
 
 ## Getting Started
-
+First install node.js: https://nodejs.org/en/download
 First, run the development server:
 
 ```bash
