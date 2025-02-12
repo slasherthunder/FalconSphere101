@@ -7,6 +7,8 @@ AC/DC coders click on the app folder and then src; you will find all of the file
 First, run the development server:
 
 ```bash
+npm install framer-motion
+&
 npm run dev
 # or
 yarn dev
