@@ -1,28 +1,23 @@
-"use client"; // Mark this as a Client Component
+"use client";
 
-import { useState } from "react"; // For managing state
-import { useRouter } from "next/navigation"; // Use next/navigation for App Router
-import { motion } from 'framer-motion'; // Import framer-motion
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState(""); // State for the search term
+  const [searchTerm, setSearchTerm] = useState("");
+  const [popularSets, setPopularSets] = useState([]);
+
+  useEffect(() => {
+    const savedSets = JSON.parse(localStorage.getItem("sets")) || [];
+    setPopularSets(savedSets);
+  }, []);
 
   const navigateTo = (path) => {
     router.push(path);
   };
 
-  // Dummy data for popular sets
-  const popularSets = [
-    { id: 1, title: "Biology Basics" },
-    { id: 2, title: "World History" },
-    { id: 3, title: "Algebra Essentials" },
-    { id: 4, title: "Chemistry 101" },
-    { id: 5, title: "Geography Quiz" },
-    { id: 6, title: "Literature Analysis" },
-  ];
-
-  // Filter sets based on search term
   const filteredSets = popularSets.filter((set) =>
     set.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -83,7 +78,7 @@ export default function Home() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-[#8B0000] text-[#F3B13B] border-2 border-[#8B0000] rounded-lg py-2 px-4 focus:outline-none focus:border-[#F3B13B] transition-all"
             initial={{ scale: 1 }}
-            whileFocus={{ scale: 1.05 }} // Scale on focus
+            whileFocus={{ scale: 1.05 }}
           />
         </div>
 
@@ -99,10 +94,10 @@ export default function Home() {
               <motion.div
                 key={set.id}
                 className="bg-[#600000] rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-                whileHover={{ scale: 1.03 }} // Slightly scale up on hover
+                whileHover={{ scale: 1.03 }}
               >
                 <h3 className="text-xl font-semibold text-[#F3B13B] mb-2">
-                  {set.title}
+                  {set.title} {/* Display the title */}
                 </h3>
                 <p className="text-[#F3B13B] mb-4">
                   A collection of flashcards for mastering your subject.
@@ -111,7 +106,7 @@ export default function Home() {
                   onClick={() => navigateTo(`/study-set/${set.id}`)}
                   className="bg-[#8B0000] text-[#F3B13B] px-4 py-2 rounded-lg font-semibold 
                   hover:bg-[#F3B13B] hover:text-[#8B0000] transition-colors"
-                  whileHover={{ scale: 1.05 }} // Slightly scale the button on hover
+                  whileHover={{ scale: 1.05 }}
                 >
                   View Set
                 </motion.button>
