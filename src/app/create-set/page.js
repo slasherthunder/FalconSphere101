@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 
 export default function CreateSet() {
-  const [question, setQuestion] = useState("What is the capital of Russia?");
-  const [options, setOptions] = useState(["Moscow", "Romania", "St. Petersburg", "Macedonia"]);
-  const [correctAnswer, setCorrectAnswer] = useState("Moscow");
+  const [question, setQuestion] = useState("Question:");
+  const [title, setTitle] = useState("Name of Set");
+  const [options, setOptions] = useState(["Option 1", "Option 2", "Option 3", "Option 4"]);
+  const [correctAnswer, setCorrectAnswer] = useState("Option 1");
   const [image, setImage] = useState(null);
 
   const handleAddOption = () => {
@@ -30,19 +30,24 @@ export default function CreateSet() {
     }
   };
 
+  const handleRemoveImage = () => {
+    setImage(null);
+    const fileInput = document.querySelector('input[type=file]');
+    if (fileInput) {
+      fileInput.value = ""; 
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission, e.g., save the question and options
-    console.log({ question, options, correctAnswer, image });
+    console.log({ title, question, options, correctAnswer, image });
   };
 
   return (
     <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
       <div className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-6xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
-          <h2 className="text-4xl text-[#FFD700] font-bold">
-            Create New Set
-          </h2>
+          <h2 className="text-4xl text-[#FFD700] font-bold">Create New Set</h2>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-8">
@@ -50,20 +55,23 @@ export default function CreateSet() {
           <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
             <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Preview</h2>
             <div className="space-y-4">
-              <div className="text-[#FFD700] text-lg font-semibold">
-                {question}
-              </div>
+              <div className="text-[#FFD700] text-3xl font-semibold mb-2">{title}</div>
+              <div className="text-[#FFD700] text-lg font-semibold">{question}</div>
               {image && (
-                <div className="w-full h-48 overflow-hidden rounded">
+                <div className="relative w-full h-48 overflow-hidden rounded">
                   <img src={image} alt="Question" className="w-full h-full object-cover" />
+                  <button
+                    onClick={handleRemoveImage}
+                    aria-label="Remove Image"
+                    className="absolute top-2 right-2 bg-red-600 text-white w-8 h-8 flex items-center justify-center rounded-full transition duration-300 ease-in-out transform hover:bg-red-700 hover:scale-105"
+                  >
+                    &times;
+                  </button>
                 </div>
               )}
               <div className="space-y-2">
                 {options.map((option, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center p-3 bg-[#500000] rounded-lg border border-[#FFD700]"
-                  >
+                  <div key={index} className="flex items-center p-3 bg-[#500000] rounded-lg border border-[#FFD700]">
                     <input
                       type="radio"
                       name="preview-answer"
@@ -84,13 +92,25 @@ export default function CreateSet() {
             <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Edit Set</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
+                <label className="block text-[#FFD700] font-medium mb-2">Title:</label>
+                <input
+                  type="text"
+                  value={title}
+                  onFocus={() => setTitle("")} // Clear title on focus
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                  placeholder="Enter title"
+                />
+              </div>
+              <div>
                 <label className="block text-[#FFD700] font-medium mb-2">Question:</label>
                 <input
                   type="text"
                   value={question}
+                  onFocus={() => setQuestion("")} // Clear question on focus
                   onChange={(e) => setQuestion(e.target.value)}
                   className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                  placeholder="Enter question"
+                  placeholder="Enter your question"
                 />
               </div>
               <div>
@@ -98,6 +118,7 @@ export default function CreateSet() {
                 <input
                   type="file"
                   onChange={handleImageChange}
+                  onFocus={handleRemoveImage} // Clear image on focus
                   className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
                 />
               </div>
@@ -108,9 +129,10 @@ export default function CreateSet() {
                     key={index}
                     type="text"
                     value={option}
+                    onFocus={() => handleOptionChange(index, "")} // Clear option on focus
                     onChange={(e) => handleOptionChange(index, e.target.value)}
                     className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] mb-2 focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                    placeholder={`Option ${index + 1}`}
+                    placeholder={`Enter a possible answer`}
                   />
                 ))}
                 <button
@@ -126,6 +148,7 @@ export default function CreateSet() {
                 <select
                   value={correctAnswer}
                   onChange={(e) => setCorrectAnswer(e.target.value)}
+                  onFocus={() => setCorrectAnswer("")} // Clear correct answer on focus
                   className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
                 >
                   <option value="">Select correct answer</option>
