@@ -2,32 +2,39 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export default function JoinGame() {
   const [sessionCode, setSessionCode] = useState('');
   const [playerName, setPlayerName] = useState('');
+  const [error, setError] = useState('');
+  const router = useRouter();
 
   // Handle session code input change
   const handleSessionCodeChange = (event) => {
     setSessionCode(event.target.value);
+    setError(''); // Clear error when user types
   };
 
   // Handle player name input change
   const handlePlayerNameChange = (event) => {
     setPlayerName(event.target.value);
+    setError(''); // Clear error when user types
   };
 
   // Join the game session
   const joinGame = () => {
     if (!sessionCode) {
-      alert('Please enter a session code.');
+      setError('Please enter a session code.');
       return;
     }
     if (!playerName) {
-      alert('Please enter your name.');
+      setError('Please enter your name.');
       return;
     }
-    alert(`Joined game session with code: ${sessionCode}`);
+
+    // Redirect the player to the game session page
+    router.push(`/game-session/${sessionCode}`);
   };
 
   return (
@@ -40,7 +47,8 @@ export default function JoinGame() {
       >
         <h1 className="text-4xl text-[#FFD700] font-bold mb-8">Join A Game</h1>
 
-        <div className="mb-8">
+        {/* Session Code Input */}
+        <div className="mb-6">
           <motion.input
             type="text"
             placeholder="Enter Session Code"
@@ -50,7 +58,8 @@ export default function JoinGame() {
           />
         </div>
 
-        <div className="mb-8">
+        {/* Player Name Input */}
+        <div className="mb-6">
           <motion.input
             type="text"
             placeholder="Enter Your Name"
@@ -60,6 +69,19 @@ export default function JoinGame() {
           />
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-[#FF5252] mb-4"
+          >
+            {error}
+          </motion.div>
+        )}
+
+        {/* Join Game Button */}
         <motion.button
           onClick={joinGame}
           whileHover={{ scale: 1.1 }}
