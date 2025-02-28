@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function CreateSet() {
   const [question, setQuestion] = useState("Question:");
@@ -8,6 +8,21 @@ export default function CreateSet() {
   const [options, setOptions] = useState(["Option 1", "Option 2", "Option 3", "Option 4"]);
   const [correctAnswer, setCorrectAnswer] = useState("Option 1");
   const [image, setImage] = useState(null);
+
+
+//Things
+useEffect(() => {
+  const data = window.localStorage.getItem("question")
+  setQuestion(data)
+}, []);
+const handleQuestionChange = (e) => {
+  setQuestion(e)
+  window.localStorage.setItem("question", e)
+  console.log(e)
+}
+
+
+
 
   const handleAddOption = () => {
     setOptions([...options, ""]);
@@ -108,7 +123,7 @@ export default function CreateSet() {
                   type="text"
                   value={question}
                   onFocus={() => setQuestion("")} // Clear question on focus
-                  onChange={(e) => setQuestion(e.target.value)}
+                  onChange={(e) => handleQuestionChange(e.target.value)}
                   className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
                   placeholder="Enter your question"
                 />
