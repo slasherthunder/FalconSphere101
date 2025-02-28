@@ -10,11 +10,13 @@ export default function CreateSet() {
   const [image, setImage] = useState(null);
 
 
-//Things
+//Initializes the variible question to the stored data every single time the page is rendered or refreshed
 useEffect(() => {
   const data = window.localStorage.getItem("question")
   setQuestion(data)
 }, []);
+
+//Whenever the question data changes, it changes the question varible as normal, but also stores the data in a varible in the browser where it stays unless cache is deleted
 const handleQuestionChange = (e) => {
   setQuestion(e)
   window.localStorage.setItem("question", e)
