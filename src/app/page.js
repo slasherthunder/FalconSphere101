@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { db } from "../components/firebase"; // Import Firestore instance
+import { collection, getDocs } from "firebase/firestore"; // Import Firestore functions
 
 export default function Home() {
   const router = useRouter();
@@ -10,8 +12,17 @@ export default function Home() {
   const [popularSets, setPopularSets] = useState([]);
 
   useEffect(() => {
-    const savedSets = JSON.parse(localStorage.getItem("sets")) || [];
-    setPopularSets(savedSets);
+    const fetchSets = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "sets"));
+        const sets = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setPopularSets(sets);
+      } catch (error) {
+        console.error("Error fetching sets: ", error);
+      }
+    };
+
+    fetchSets();
   }, []);
 
   const navigateTo = (path) => {
