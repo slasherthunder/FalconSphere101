@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { db } from '../../components/firebase'; // Import Firestore instance
+import { collection, getDocs } from 'firebase/firestore'; // Import Firestore functions
 
 export default function NewGame() {
   const [sessionCode, setSessionCode] = useState('');
@@ -9,7 +11,26 @@ export default function NewGame() {
     { name: 'John Doe' },
     { name: 'Jane Smith' },
   ]);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  const [selectedSet, setSelectedSet] = useState(null); // Store the selected set
+  const [availableSets, setAvailableSets] = useState([]); // Store all available sets
+
+  // Fetch available sets from Firestore
+  useEffect(() => {
+    const fetchSets = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'sets'));
+        const sets = [];
+        querySnapshot.forEach((doc) => {
+          sets.push({ id: doc.id, ...doc.data() });
+        });
+        setAvailableSets(sets);
+      } catch (error) {
+        console.error('Error fetching sets: ', error);
+      }
+    };
+
+    fetchSets();
+  }, []);
 
   const generateRandomCode = () => {
     const code = Math.floor(10000000 + Math.random() * 90000000).toString();
@@ -25,17 +46,10 @@ export default function NewGame() {
     alert('Session code copied to clipboard!');
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const allowedTypes = ['text/plain', 'application/pdf'];
-      if (allowedTypes.includes(file.type)) {
-        setUploadedFile(file);
-        alert(`File "${file.name}" uploaded successfully!`);
-      } else {
-        alert('Invalid file type. Please upload a .txt or .pdf file.');
-      }
-    }
+  const handleSetSelection = (setId) => {
+    const selected = availableSets.find((set) => set.id === setId);
+    setSelectedSet(selected);
+    alert(`Set "${selected.title}" selected successfully!`);
   };
 
   const addPlayer = () => {
@@ -65,7 +79,7 @@ export default function NewGame() {
     if (window.confirm('Are you sure you want to reset the session?')) {
       setPlayers([]);
       generateRandomCode();
-      setUploadedFile(null);
+      setSelectedSet(null);
     }
   };
 
@@ -74,11 +88,12 @@ export default function NewGame() {
       alert('You need at least 2 players to start the game.');
       return;
     }
-    if (!uploadedFile) {
-      alert('Please upload a file to start the game.');
+    if (!selectedSet) {
+      alert('Please select a set to start the game.');
       return;
     }
-    alert('Game started!');
+    alert(`Game started with set: ${selectedSet.title}`);
+    // You can now use the selectedSet data to display questions, etc.
   };
 
   return (
@@ -97,30 +112,19 @@ export default function NewGame() {
         </div>
 
         <div className="mb-8">
-          <label className="cursor-pointer bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110 flex items-center justify-center space-x-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-              />
-            </svg>
-            <span>Upload File</span>
-            <input
-              type="file"
-              className="hidden"
-              onChange={handleFileUpload}
-              accept=".txt,.pdf"
-            />
-          </label>
-          {uploadedFile && (
+          <label className="block text-[#FFD700] font-medium mb-2">Select a Set:</label>
+          <select
+            onChange={(e) => handleSetSelection(e.target.value)}
+            className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+          >
+            <option value="">Choose a set</option>
+            {availableSets.map((set) => (
+              <option key={set.id} value={set.id}>
+                {set.title}
+              </option>
+            ))}
+          </select>
+          {selectedSet && (
             <div className="mt-4 text-[#FFD700] flex items-center justify-center space-x-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -134,7 +138,7 @@ export default function NewGame() {
                   clipRule="evenodd"
                 />
               </svg>
-              <p>Uploaded File: {uploadedFile.name}</p>
+              <p>Selected Set: {selectedSet.title}</p>
             </div>
           )}
         </div>
