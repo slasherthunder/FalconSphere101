@@ -1,11 +1,11 @@
 "use client";
-
+import React from "react";
 import { useState } from "react";
 import { db } from "../../components/firebase"; // Import Firestore instance
 import { collection, addDoc } from "firebase/firestore"; // Import Firestore functions
 
 export default function CreateSet() {
-  const [title, setTitle] = useState(""); // Set title
+  const [title, setTitle] = useState("");
   const [slides, setSlides] = useState([
     {
       question: "",
@@ -13,13 +13,12 @@ export default function CreateSet() {
       correctAnswer: "",
       image: null,
     },
-  ]); // Array of slides
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0); // Track current slide
-  const [error, setError] = useState(""); // Track validation errors
-  const [duplicateOptions, setDuplicateOptions] = useState([]); // Track duplicate options
-  const [imageBoxSize, setImageBoxSize] = useState({ width: 100, height: 12, unit: "%" }); // Default image box size
+  ]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [error, setError] = useState("");
+  const [duplicateOptions, setDuplicateOptions] = useState([]);
+  const [imageBoxSize, setImageBoxSize] = useState({ width: 100, height: 12, unit: "%" });
 
-  // Add a new slide
   const handleAddSlide = () => {
     setSlides([
       ...slides,
@@ -30,34 +29,34 @@ export default function CreateSet() {
         image: null,
       },
     ]);
-    setCurrentSlideIndex(slides.length); // Switch to the new slide
+    setCurrentSlideIndex(slides.length);
   };
 
-  // Update the current slide's question
   const handleQuestionChange = (value) => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].question = value;
     setSlides(newSlides);
   };
 
-  // Update the current slide's options
   const handleOptionChange = (index, value) => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].options[index] = value;
     setSlides(newSlides);
-
-    // Check for duplicates in real time
     checkForDuplicates(newSlides[currentSlideIndex].options);
   };
 
-  // Update the current slide's correct answer
+  const handleRemoveOption = (index) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].options.splice(index, 1);
+    setSlides(newSlides);
+  };
+
   const handleCorrectAnswerChange = (value) => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].correctAnswer = value;
     setSlides(newSlides);
   };
 
-  // Update the current slide's image
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -71,7 +70,6 @@ export default function CreateSet() {
     }
   };
 
-  // Remove the current slide's image
   const handleRemoveImage = () => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].image = null;
@@ -82,14 +80,12 @@ export default function CreateSet() {
     }
   };
 
-  // Add an option to the current slide
   const handleAddOption = () => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].options.push("");
     setSlides(newSlides);
   };
 
-  // Check for duplicate options
   const checkForDuplicates = (options) => {
     const optionCounts = {};
     const duplicates = [];
@@ -105,7 +101,6 @@ export default function CreateSet() {
       }
     });
 
-    // Flatten the duplicates array
     const allDuplicates = Object.values(optionCounts)
       .filter((indices) => indices.length > 1)
       .flat();
@@ -119,52 +114,32 @@ export default function CreateSet() {
     }
   };
 
-  // Handle image box size change
-  const handleImageBoxSizeChange = (e, dimension) => {
-    const value = e.target.value;
-    setImageBoxSize((prevSize) => ({
-      ...prevSize,
-      [dimension]: value,
-    }));
-  };
-
-  // Handle unit change
-  const handleUnitChange = (e) => {
-    const unit = e.target.value;
-    setImageBoxSize((prevSize) => ({
-      ...prevSize,
-      unit,
-    }));
-  };
-
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate options for duplicates
-    const currentSlide = slides[currentSlideIndex];
     if (duplicateOptions.length > 0) {
       setError("Options must be unique. Please remove duplicate options.");
       return;
     }
 
-    // Clear any previous errors
     setError("");
 
-    // Create an object containing all the data
     const setData = {
       title,
       slides,
-      imageBoxSize, // Save image box size
-      createdAt: new Date().toISOString(), // Add a timestamp
+      imageBoxSize,
+      createdAt: new Date().toISOString(),
     };
 
     try {
-      // Save the set to Firestore
       const docRef = await addDoc(collection(db, "sets"), setData);
       console.log("Set saved with ID: ", docRef.id);
 
-      // Clear the form after saving
+      // Store the set in local storage
+      const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
+      const newUserSets = [{ id: docRef.id, ...setData }, ...storedUserSets].slice(0, 5);
+      localStorage.setItem("userSets", JSON.stringify(newUserSets));
+
       setTitle("");
       setSlides([
         {
@@ -176,7 +151,7 @@ export default function CreateSet() {
       ]);
       setCurrentSlideIndex(0);
       setDuplicateOptions([]);
-      setImageBoxSize({ width: 100, height: 12, unit: "%" }); // Reset to default
+      setImageBoxSize({ width: 100, height: 12, unit: "%" });
     } catch (error) {
       console.error("Error saving set: ", error);
     }
@@ -191,7 +166,6 @@ export default function CreateSet() {
           <h2 className="text-4xl text-[#FFD700] font-bold">Create New Set</h2>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-600 text-white p-4 rounded-lg mb-6">
             {error}
@@ -324,61 +298,28 @@ export default function CreateSet() {
                 />
               </div>
 
-              {/* Image Box Size */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Image Box Size:</label>
-                <div className="flex gap-4">
-                  <div>
-                    <label className="block text-[#FFD700] font-medium mb-2">Width:</label>
-                    <input
-                      type="number"
-                      value={imageBoxSize.width}
-                      onChange={(e) => handleImageBoxSizeChange(e, "width")}
-                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                      placeholder="Width"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#FFD700] font-medium mb-2">Height:</label>
-                    <input
-                      type="number"
-                      value={imageBoxSize.height}
-                      onChange={(e) => handleImageBoxSizeChange(e, "height")}
-                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                      placeholder="Height"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#FFD700] font-medium mb-2">Unit:</label>
-                    <select
-                      value={imageBoxSize.unit}
-                      onChange={handleUnitChange}
-                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                    >
-                      <option value="%">%</option>
-                      <option value="px">px</option>
-                      <option value="rem">rem</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
               {/* Options */}
               <div>
                 <label className="block text-[#FFD700] font-medium mb-2">Options:</label>
                 {currentSlide.options.map((option, index) => (
-                  <input
-                    key={index}
-                    type="text"
-                    value={option}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    className={`w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] mb-2 focus:outline-none focus:ring-2 focus:ring-[#FFD700] ${
-                      duplicateOptions.includes(index) ? "border-red-500" : ""
-                    }`}
-                    placeholder={`Enter a possible answer`}
-                  />
+                  <div key={index} className="flex items-center space-x-2 mb-2">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => handleOptionChange(index, e.target.value)}
+                      className={`w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] ${
+                        duplicateOptions.includes(index) ? "border-red-500" : ""
+                      }`}
+                      placeholder={`Enter a possible answer`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOption(index)}
+                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-300"
+                    >
+                      &times;
+                    </button>
+                  </div>
                 ))}
                 <button
                   type="button"
