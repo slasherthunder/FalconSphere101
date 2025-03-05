@@ -1,11 +1,9 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "../../../components/firebase"; // Import Firestore instance
-import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
+import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion } from "framer-motion"; // For animations
-import { getAuth } from "firebase/auth"; // Import Firebase Authentication
 
 export default function StudySet() {
   const { id } = useParams(); // Get the set ID from the URL
@@ -16,7 +14,6 @@ export default function StudySet() {
   const [score, setScore] = useState(0); // Track user's score
   const [showResult, setShowResult] = useState(false); // Show result after quiz ends
   const [imageBoxSize, setImageBoxSize] = useState({ width: 100, height: 12, unit: "%" }); // Default image box size
-  const auth = getAuth(); // Firebase Authentication instance
 
   // Fetch the set data from Firestore
   useEffect(() => {
@@ -46,36 +43,6 @@ export default function StudySet() {
     fetchSetData();
   }, [id]);
 
-  // Fetch user preferences on component load
-  useEffect(() => {
-    const fetchUserPreferences = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const userPrefsRef = doc(db, "userPreferences", user.uid);
-        const userPrefsSnap = await getDoc(userPrefsRef);
-
-        if (userPrefsSnap.exists()) {
-          const userPrefs = userPrefsSnap.data();
-          if (userPrefs.imageBoxSize) {
-            setImageBoxSize(userPrefs.imageBoxSize); // Load saved preferences
-          }
-        }
-      }
-    };
-
-    fetchUserPreferences();
-  }, [auth]);
-
-  // Save user preferences to Firestore
-  const saveUserPreferences = async () => {
-    const user = auth.currentUser;
-    if (user) {
-      const userPrefsRef = doc(db, "userPreferences", user.uid);
-      await setDoc(userPrefsRef, { imageBoxSize }, { merge: true }); // Save preferences
-      console.log("User preferences saved!");
-    }
-  };
-
   // Handle answer selection
   const handleAnswerSelect = (option) => {
     setSelectedAnswer(option);
@@ -104,28 +71,21 @@ export default function StudySet() {
     setShowResult(false);
   };
 
-  // Handle image box size change
-  const handleImageBoxSizeChange = (e, dimension) => {
-    const value = e.target.value;
-    setImageBoxSize((prevSize) => ({
-      ...prevSize,
-      [dimension]: value,
-    }));
-  };
+  // Download the set as a JSON file
+  const downloadSet = () => {
+    const jsonString = JSON.stringify(setData, null, 2); // Convert setData to JSON string
+    const blob = new Blob([jsonString], { type: "application/json" }); // Create a Blob from the JSON string
+    const url = URL.createObjectURL(blob); // Create a URL for the Blob
 
-  // Handle unit change
-  const handleUnitChange = (e) => {
-    const unit = e.target.value;
-    setImageBoxSize((prevSize) => ({
-      ...prevSize,
-      unit,
-    }));
+    // Create a temporary anchor element to trigger the download
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${setData.title.replace(/\s+/g, "_")}_set.json`; // Set the filename
+    document.body.appendChild(a);
+    a.click(); // Trigger the download
+    document.body.removeChild(a); // Clean up
+    URL.revokeObjectURL(url); // Release the Blob URL
   };
-
-  // Save preferences when imageBoxSize changes
-  useEffect(() => {
-    saveUserPreferences();
-  }, [imageBoxSize]);
 
   if (loading) {
     return (
@@ -146,66 +106,110 @@ export default function StudySet() {
   const currentSlide = setData.slides[currentSlideIndex];
 
   return (
-    <div className="min-h-screen bg-[#8B0000] py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-[#FFD700] mb-4">Quiz: {setData.title}</h1>
-        <div className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-6xl mx-auto text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]">
-          {!showResult ? (
-            <>
-              {/* Quiz Section */}
-              <div className="w-full p-6 bg-[#600000] rounded-lg">
-                <h2 className="text-2xl text-[#FFD700] font-bold mb-6">
-                  Question {currentSlideIndex + 1} of {setData.slides.length}
-                </h2>
-                <div className="space-y-4">
-                  <div className="text-[#FFD700] text-lg font-semibold">
-                    {currentSlide.question}
+    <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
+      <div className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-6xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+          <h2 className="text-4xl text-[#FFD700] font-bold">Study Set: {setData.title}</h2>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-8">
+          {/* Preview Section (Left Side) */}
+          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
+            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Preview</h2>
+            <div className="space-y-4">
+              <div className="text-[#FFD700] text-3xl font-semibold mb-2">
+                {setData.title}
+              </div>
+              <div className="text-[#FFD700] text-lg font-semibold">
+                {currentSlide.question || "Question:"}
+              </div>
+              {currentSlide.image && (
+                <div
+                  className="relative overflow-hidden rounded"
+                  style={{
+                    width: `${imageBoxSize.width}${imageBoxSize.unit}`,
+                    height: `${imageBoxSize.height}${imageBoxSize.unit}`,
+                  }}
+                >
+                  <img
+                    src={currentSlide.image}
+                    alt="Question"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                {currentSlide.options.map((option, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center p-3 rounded-lg border ${
+                      option === currentSlide.correctAnswer
+                        ? "border-green-500 bg-green-900"
+                        : "border-[#FFD700] bg-[#500000]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="preview-answer"
+                      value={option}
+                      checked={option === selectedAnswer}
+                      onChange={() => handleAnswerSelect(option)}
+                      className="form-radio h-5 w-5 text-[#FFD700] border-2 border-[#FFD700]"
+                    />
+                    <span className="ml-3 text-[#FFD700] text-lg">
+                      {option || `Option ${index + 1}`}
+                    </span>
                   </div>
-                  {currentSlide.image && (
-                    <div
-                      className="relative overflow-hidden rounded"
-                      style={{
-                        width: `${imageBoxSize.width}${imageBoxSize.unit}`,
-                        height: `${imageBoxSize.height}${imageBoxSize.unit}`,
-                      }}
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Information Section (Right Side) */}
+          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
+            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Slide Information</h2>
+            <div className="space-y-6">
+              {/* Slide Navigation */}
+              <div>
+                <label className="block text-[#FFD700] font-medium mb-2">Slide:</label>
+                <div className="flex gap-2">
+                  {setData.slides.map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setCurrentSlideIndex(index)}
+                      className={`px-4 py-2 rounded-lg font-bold ${
+                        currentSlideIndex === index
+                          ? "bg-[#FFD700] text-[#8B0000]"
+                          : "bg-[#500000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                      } transition duration-300`}
                     >
-                      <img
-                        src={currentSlide.image}
-                        alt="Question"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    {currentSlide.options.map((option, index) => (
-                      <motion.button
-                        key={index}
-                        onClick={() => handleAnswerSelect(option)}
-                        className={`w-full p-3 bg-[#500000] rounded-lg border border-[#FFD700] text-[#FFD700] text-lg text-left ${
-                          selectedAnswer === option
-                            ? "bg-[#FFD700] text-[#8B0000]"
-                            : "hover:bg-[#FFD700] hover:text-[#8B0000]"
-                        } transition duration-300`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {option || `Option ${index + 1}`}
-                      </motion.button>
-                    ))}
-                  </div>
+                      {index + 1}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Image Box Size Controls */}
-              <div className="mt-6">
+              {/* Correct Answer */}
+              <div>
+                <label className="block text-[#FFD700] font-medium mb-2">Correct Answer:</label>
+                <div className="p-3 bg-[#500000] rounded-lg border border-[#FFD700] text-[#FFD700]">
+                  {currentSlide.correctAnswer || "No correct answer set"}
+                </div>
+              </div>
+
+              {/* Image Box Size */}
+              <div>
                 <label className="block text-[#FFD700] font-medium mb-2">Image Box Size:</label>
-                <div className="flex gap-4 justify-center">
+                <div className="flex gap-4">
                   <div>
                     <label className="block text-[#FFD700] font-medium mb-2">Width:</label>
                     <input
                       type="number"
                       value={imageBoxSize.width}
-                      onChange={(e) => handleImageBoxSizeChange(e, "width")}
+                      onChange={(e) =>
+                        setImageBoxSize((prev) => ({ ...prev, width: e.target.value }))
+                      }
                       className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
                       placeholder="Width"
                       min="0"
@@ -216,7 +220,9 @@ export default function StudySet() {
                     <input
                       type="number"
                       value={imageBoxSize.height}
-                      onChange={(e) => handleImageBoxSizeChange(e, "height")}
+                      onChange={(e) =>
+                        setImageBoxSize((prev) => ({ ...prev, height: e.target.value }))
+                      }
                       className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
                       placeholder="Height"
                       min="0"
@@ -226,7 +232,9 @@ export default function StudySet() {
                     <label className="block text-[#FFD700] font-medium mb-2">Unit:</label>
                     <select
                       value={imageBoxSize.unit}
-                      onChange={handleUnitChange}
+                      onChange={(e) =>
+                        setImageBoxSize((prev) => ({ ...prev, unit: e.target.value }))
+                      }
                       className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
                     >
                       <option value="%">%</option>
@@ -237,32 +245,15 @@ export default function StudySet() {
                 </div>
               </div>
 
-              {/* Next Button */}
+              {/* Download Set Button */}
               <button
-                onClick={handleNextQuestion}
-                disabled={!selectedAnswer}
-                className="mt-6 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {currentSlideIndex < setData.slides.length - 1
-                  ? "Next Question"
-                  : "Finish Quiz"}
-              </button>
-            </>
-          ) : (
-            /* Result Section */
-            <div className="w-full p-6 bg-[#600000] rounded-lg">
-              <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Quiz Result</h2>
-              <div className="text-[#FFD700] text-lg font-semibold">
-                You scored {score} out of {setData.slides.length}!
-              </div>
-              <button
-                onClick={restartQuiz}
+                onClick={downloadSet}
                 className="mt-6 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
               >
-                Restart Quiz
+                Download Set
               </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
