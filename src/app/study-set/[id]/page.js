@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { db } from "../../../components/firebase"; // Import Firestore instance
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion } from "framer-motion"; // For animations
 
 export default function StudySet() {
   const { id } = useParams(); // Get the set ID from the URL
+  const router = useRouter(); // Router for navigation
   const [setData, setSetData] = useState(null); // State to store the set data
   const [loading, setLoading] = useState(true); // State to handle loading
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0); // Track current slide
@@ -87,6 +88,11 @@ export default function StudySet() {
     URL.revokeObjectURL(url); // Release the Blob URL
   };
 
+  // Navigate to the play set page
+  const navigateToPlaySet = () => {
+    router.push(`/study-set/play/${id}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#8B0000] py-8 flex items-center justify-center">
@@ -110,6 +116,12 @@ export default function StudySet() {
       <div className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-6xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
           <h2 className="text-4xl text-[#FFD700] font-bold">Study Set: {setData.title}</h2>
+          <button
+            onClick={navigateToPlaySet}
+            className="mt-4 sm:mt-0 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
+          >
+            Play Set
+          </button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-8">
