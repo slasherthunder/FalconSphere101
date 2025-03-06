@@ -39,7 +39,9 @@ export default function Home() {
   }, []);
 
   const navigateTo = (path, set) => {
+    // Update recent searches and remove from user sets if applicable
     if (set) {
+      removeFromUserSets(set); // Remove from user sets before navigating
       addToRecentSearches(set);
     }
     router.push(path);
@@ -54,11 +56,20 @@ export default function Home() {
     });
   };
 
+  const removeFromUserSets = (set) => {
+    setUserSets((prevSets) => {
+      const updatedSets = prevSets.filter((s) => s.id !== set.id);
+      localStorage.setItem("userSets", JSON.stringify(updatedSets)); // Update local storage
+      return updatedSets;
+    });
+  };
+
   const filteredSets = popularSets.filter((set) =>
     set.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleEditSet = (set) => {
+    removeFromUserSets(set); // Remove from user sets before editing
     router.push(`/edit-set/${set.id}`);
   };
 
