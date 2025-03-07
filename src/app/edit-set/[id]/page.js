@@ -66,6 +66,14 @@ export default function EditSet() {
         title,
         slides,
       });
+
+      // Update the set in local storage
+      const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
+      const updatedUserSets = storedUserSets.map((set) =>
+        set.id === id ? { ...set, title, slides } : set
+      );
+      localStorage.setItem("userSets", JSON.stringify(updatedUserSets));
+
       alert("Set updated successfully!");
       router.push("/");
     } catch (error) {
@@ -79,6 +87,12 @@ export default function EditSet() {
     try {
       const docRef = doc(db, "sets", id);
       await deleteDoc(docRef);
+
+      // Remove the set from local storage
+      const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
+      const updatedUserSets = storedUserSets.filter((set) => set.id !== id);
+      localStorage.setItem("userSets", JSON.stringify(updatedUserSets));
+
       alert("Set deleted successfully!");
       router.push("/");
     } catch (error) {
