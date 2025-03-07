@@ -38,15 +38,21 @@ export default function Home() {
     }
   }, []);
 
-  const navigateTo = (path, set) => {
-    // Update recent searches and remove from user sets if applicable
-    if (set) {
-      removeFromUserSets(set); // Remove from user sets before navigating
-      addToRecentSearches(set);
-    }
-    router.push(path);
-  };
+  // Listen for changes to local storage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
+      setUserSets(storedUserSets);
+    };
 
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  // Add a set to recent searches without removing it from user sets
   const addToRecentSearches = (set) => {
     setRecentSearches((prevSearches) => {
       const updatedSearches = prevSearches.filter((s) => s.id !== set.id);
@@ -56,22 +62,23 @@ export default function Home() {
     });
   };
 
-  const removeFromUserSets = (set) => {
-    setUserSets((prevSets) => {
-      const updatedSets = prevSets.filter((s) => s.id !== set.id);
-      localStorage.setItem("userSets", JSON.stringify(updatedSets)); // Update local storage
-      return updatedSets;
-    });
+  // Navigate to a path and optionally add the set to recent searches
+  const navigateTo = (path, set) => {
+    if (set) {
+      addToRecentSearches(set); // Add to recent searches without removing from user sets
+    }
+    router.push(path);
   };
 
+  // Handle editing a set (no removal from user sets)
+  const handleEditSet = (set) => {
+    router.push(`/edit-set/${set.id}`);
+  };
+
+  // Filter sets based on search term
   const filteredSets = popularSets.filter((set) =>
     set.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleEditSet = (set) => {
-    removeFromUserSets(set); // Remove from user sets before editing
-    router.push(`/edit-set/${set.id}`);
-  };
 
   return (
     <main className="min-h-screen bg-[#FFFFFF] flex flex-col items-center">
