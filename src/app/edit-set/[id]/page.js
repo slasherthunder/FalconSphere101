@@ -2,7 +2,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "../../../components/firebase"; // Import Firestore instance
-import { doc, getDoc, updateDoc } from "firebase/firestore"; // Import Firestore functions
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"; // Import Firestore functions
+import { Filter } from "bad-words"; // Import the profanity filter
+
+// Initialize the profanity filter
+const filter = new Filter();
 
 export default function EditSet() {
   const { id } = useParams(); // Get the set ID from the URL
@@ -18,10 +22,83 @@ export default function EditSet() {
   ]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [error, setError] = useState("");
-  const [duplicateOptions, setDuplicateOptions] = useState([]);
-  const [imageBoxSize, setImageBoxSize] = useState({ width: 100, height: 12, unit: "%" });
   const [loading, setLoading] = useState(true);
 
+  const currentSlide = slides[currentSlideIndex];
+
+  // Validate for profanity
+  const validateProfanity = (text) => {
+    return filter.isProfane(text);
+  };
+
+  // Handle saving the set
+  const handleSaveSet = async () => {
+    // Check for profanity in the title
+    if (validateProfanity(title)) {
+      setError("Title contains inappropriate language. Please revise.");
+      return;
+    }
+
+    // Check for profanity in the slides
+    for (const slide of slides) {
+      if (validateProfanity(slide.question)) {
+        setError(`Question in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+        return;
+      }
+      for (const option of slide.options) {
+        if (validateProfanity(option)) {
+          setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+          return;
+        }
+      }
+    }
+
+    // Check if correct answer is one of the options
+    if (!currentSlide.options.includes(currentSlide.correctAnswer)) {
+      setError("Correct answer must be one of the options.");
+      return;
+    }
+
+    // Proceed with saving if no profanity is found
+    try {
+      const docRef = doc(db, "sets", id);
+      await updateDoc(docRef, {
+        title,
+        slides,
+      });
+      alert("Set updated successfully!");
+      router.push("/");
+    } catch (error) {
+      console.error("Error updating set: ", error);
+      setError("Failed to update the set. Please try again.");
+    }
+  };
+
+  // Handle deleting the set
+  const handleDeleteSet = async () => {
+    try {
+      const docRef = doc(db, "sets", id);
+      await deleteDoc(docRef);
+      alert("Set deleted successfully!");
+      router.push("/");
+    } catch (error) {
+      console.error("Error deleting set: ", error);
+      setError("Failed to delete the set. Please try again.");
+    }
+  };
+
+  // Handle deleting a slide
+  const handleDeleteSlide = (index) => {
+    if (slides.length > 1) {
+      const updatedSlides = slides.filter((_, i) => i !== index);
+      setSlides(updatedSlides);
+      setCurrentSlideIndex(Math.min(currentSlideIndex, updatedSlides.length - 1));
+    } else {
+      setError("A set must have at least one slide.");
+    }
+  };
+
+  // Fetch set data on component mount
   useEffect(() => {
     const fetchSetData = async () => {
       try {
@@ -39,12 +116,12 @@ export default function EditSet() {
               image: null,
             },
           ]);
-          setImageBoxSize(data.imageBoxSize || { width: 100, height: 12, unit: "%" });
         } else {
-          console.log("No such document!");
+          setError("No such document!");
         }
       } catch (error) {
         console.error("Error fetching set data: ", error);
+        setError("Failed to fetch data, please try again.");
       } finally {
         setLoading(false); // Set loading to false after fetching
       }
@@ -53,18 +130,25 @@ export default function EditSet() {
     fetchSetData();
   }, [id]);
 
-  const handleSaveSet = async () => {
-    try {
-      const docRef = doc(db, "sets", id);
-      await updateDoc(docRef, {
-        title,
-        slides,
-        imageBoxSize,
-      });
-      alert("Set updated successfully!");
-      router.push("/");
-    } catch (error) {
-      console.error("Error updating set: ", error);
+  // Handle other functions like slide management ...
+  const handleQuestionChange = (question) => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].question = question;
+    setSlides(updatedSlides);
+  };
+
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
+      const updatedSlides = [...slides];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updatedSlides[currentSlideIndex].image = reader.result;
+        setSlides(updatedSlides);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setError("Please upload a valid JPEG or PNG image.");
     }
   };
 
@@ -81,97 +165,43 @@ export default function EditSet() {
     setCurrentSlideIndex(slides.length);
   };
 
-  const handleQuestionChange = (value) => {
-    const newSlides = [...slides];
-    newSlides[currentSlideIndex].question = value;
-    setSlides(newSlides);
+  const handleRemoveImage = () => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].image = null;
+    setSlides(updatedSlides);
   };
 
   const handleOptionChange = (index, value) => {
-    const newSlides = [...slides];
-    newSlides[currentSlideIndex].options[index] = value;
-    setSlides(newSlides);
-    checkForDuplicates(newSlides[currentSlideIndex].options);
-  };
-
-  const handleRemoveOption = (index) => {
-    const newSlides = [...slides];
-    newSlides[currentSlideIndex].options.splice(index, 1);
-    setSlides(newSlides);
-  };
-
-  const handleCorrectAnswerChange = (value) => {
-    const newSlides = [...slides];
-    newSlides[currentSlideIndex].correctAnswer = value;
-    setSlides(newSlides);
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newSlides = [...slides];
-        newSlides[currentSlideIndex].image = reader.result;
-        setSlides(newSlides);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    const newSlides = [...slides];
-    newSlides[currentSlideIndex].image = null;
-    setSlides(newSlides);
-    const fileInput = document.querySelector('input[type=file]');
-    if (fileInput) {
-      fileInput.value = "";
-    }
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].options[index] = value;
+    setSlides(updatedSlides);
   };
 
   const handleAddOption = () => {
-    const newSlides = [...slides];
-    newSlides[currentSlideIndex].options.push("");
-    setSlides(newSlides);
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].options.push("");
+    setSlides(updatedSlides);
   };
 
-  const checkForDuplicates = (options) => {
-    const optionCounts = {};
-    const duplicates = [];
-
-    options.forEach((option, index) => {
-      if (option.trim() !== "") {
-        if (optionCounts[option]) {
-          duplicates.push(index);
-          optionCounts[option].push(index);
-        } else {
-          optionCounts[option] = [index];
-        }
-      }
-    });
-
-    const allDuplicates = Object.values(optionCounts)
-      .filter((indices) => indices.length > 1)
-      .flat();
-
-    setDuplicateOptions(allDuplicates);
-
-    if (allDuplicates.length > 0) {
-      setError("Options must be unique. Please remove duplicate options.");
+  const handleRemoveOption = (index) => {
+    if (currentSlide.options.length > 2) {
+      const updatedSlides = [...slides];
+      updatedSlides[currentSlideIndex].options.splice(index, 1);
+      setSlides(updatedSlides);
     } else {
-      setError("");
+      setError("A question must have at least 2 options.");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#8B0000] py-8 flex items-center justify-center">
-        <p className="text-[#FFD700] text-2xl">Loading...</p>
-      </div>
-    );
-  }
+  const handleCorrectAnswerChange = (correctAnswer) => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].correctAnswer = correctAnswer;
+    setSlides(updatedSlides);
+  };
 
-  const currentSlide = slides[currentSlideIndex];
+  if (loading) {
+    return <div className="text-[#FFD700] text-2xl">Loading...</div>; // Loading state
+  }
 
   return (
     <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
@@ -201,8 +231,8 @@ export default function EditSet() {
                 <div
                   className="relative overflow-hidden rounded"
                   style={{
-                    width: `${imageBoxSize.width}${imageBoxSize.unit}`,
-                    height: `${imageBoxSize.height}${imageBoxSize.unit}`,
+                    width: "100%",
+                    height: "auto",
                   }}
                 >
                   <img
@@ -215,7 +245,7 @@ export default function EditSet() {
                     aria-label="Remove Image"
                     className="absolute top-2 right-2 bg-red-600 text-white w-8 h-8 flex items-center justify-center rounded-full transition duration-300 ease-in-out transform hover:bg-red-700 hover:scale-105"
                   >
-                    &times;
+                    ×
                   </button>
                 </div>
               )}
@@ -223,11 +253,7 @@ export default function EditSet() {
                 {currentSlide.options.map((option, index) => (
                   <div
                     key={index}
-                    className={`flex items-center p-3 rounded-lg border ${
-                      duplicateOptions.includes(index)
-                        ? "border-red-500 bg-red-900"
-                        : "border-[#FFD700] bg-[#500000]"
-                    }`}
+                    className="flex items-center p-3 rounded-lg border border-[#FFD700] bg-[#500000]"
                   >
                     <input
                       type="radio"
@@ -267,23 +293,32 @@ export default function EditSet() {
                 <label className="block text-[#FFD700] font-medium mb-2">Slide:</label>
                 <div className="flex gap-2">
                   {slides.map((_, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => setCurrentSlideIndex(index)}
-                      className={`px-4 py-2 rounded-lg font-bold ${
-                        currentSlideIndex === index
-                          ? "bg-[#FFD700] text-[#8B0000]"
-                          : "bg-[#500000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
-                      } transition duration-300`}
-                    >
-                      {index + 1}
-                    </button>
+                    <div key={index} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentSlideIndex(index)}
+                        className={`px-4 py-2 rounded-lg font-bold ${
+                          currentSlideIndex === index
+                            ? "bg-[#FFD700] text-[#8B0000]"
+                            : "bg-[#500000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                        } transition duration-300`}
+                      >
+                        {index + 1}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSlide(index)}
+                        className="bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 transition duration-300"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ))}
                   <button
                     type="button"
                     onClick={handleAddSlide}
                     className="px-4 py-2 rounded-lg font-bold bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition duration-300"
+                    aria-label="Add Slide"
                   >
                     +
                   </button>
@@ -321,9 +356,7 @@ export default function EditSet() {
                       type="text"
                       value={option}
                       onChange={(e) => handleOptionChange(index, e.target.value)}
-                      className={`w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] ${
-                        duplicateOptions.includes(index) ? "border-red-500" : ""
-                      }`}
+                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
                       placeholder={`Enter a possible answer`}
                     />
                     <button
@@ -331,7 +364,7 @@ export default function EditSet() {
                       onClick={() => handleRemoveOption(index)}
                       className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-300"
                     >
-                      &times;
+                      ×
                     </button>
                   </div>
                 ))}
@@ -367,6 +400,14 @@ export default function EditSet() {
                 className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
               >
                 Save Set
+              </button>
+
+              {/* Delete Set Button */}
+              <button
+                onClick={handleDeleteSet}
+                className="bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 transition duration-300 transform hover:scale-110"
+              >
+                Delete Set
               </button>
             </form>
           </div>
