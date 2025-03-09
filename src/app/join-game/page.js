@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
@@ -9,6 +9,8 @@ export default function JoinGame() {
   const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
+  const [activeSessionCode, setActiveSessionCode] = useState("");
+  const [players, setPlayers] = useState(localStorage.getItem("Players"));
 
   // Handle session code input change
   const handleSessionCodeChange = (event) => {
@@ -33,10 +35,25 @@ export default function JoinGame() {
       return;
     }
 
+    setActiveSessionCode(localStorage.getItem("Session Code"));
+    if (sessionCode != activeSessionCode){
+      setError("No sessions exist with that code");
+      return;
+    }
+
     // Redirect the player to the game session page
-    router.push(`/game-session/${sessionCode}`);
+    router.push(`/game-wait`);
+    setSavedValues(playerName);
+
   };
 
+  const setSavedValues = (name)=> {
+    setPlayers([players, name]);
+    sessionStorage.setItem("Name", name);
+  };
+  useEffect(() => { 
+    localStorage.setItem("Players", players);
+  }, [players]);
   return (
     <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
       <motion.div

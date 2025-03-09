@@ -14,7 +14,7 @@ export default function NewGame() {
   useEffect(() => {
     const fetchSets = () => {
       try {
-        const sets = JSON.parse(localStorage.getItem("sets") || "[]");
+        const sets = JSON.parse(localStorage.getItem("userSets") || "[]");
         if (Array.isArray(sets)) {
           setAvailableSets(sets);
         } else {
@@ -32,6 +32,7 @@ export default function NewGame() {
   const generateRandomCode = () => {
     const code = Math.floor(10000000 + Math.random() * 90000000).toString();
     setSessionCode(code);
+    localStorage.setItem("Session Code", code)
   };
 
   useEffect(() => {
@@ -95,6 +96,7 @@ export default function NewGame() {
     }
     alert(`Game started with set: ${selectedSet.title}`);
   };
+
 
   return (
     <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
