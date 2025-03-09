@@ -3,107 +3,98 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
+export default function GameWait() {
+  const [players, setPlayers] = useState("");
+  const [sessionCode, setSessionCode] = useState("");
+  const router = useRouter();
 
+  // Fetch players and session code from localStorage on the client side
+  useEffect(() => {
+    // Ensure this code runs only in the browser
+    if (typeof window !== "undefined") {
+      const storedPlayers = localStorage.getItem("Players") || "";
+      const storedSessionCode = localStorage.getItem("Session Code") || "";
+      setPlayers(storedPlayers);
+      setSessionCode(storedSessionCode);
 
+      // Update players every second
+      const intervalId = setInterval(() => {
+        const updatedPlayers = localStorage.getItem("Players") || "";
+        setPlayers(updatedPlayers);
+      }, 1000);
 
-export default function gameWait() {
-    const [players, setPlayers] = useState(localStorage.getItem("Players"))
-    const test = players.split(",");
-    const test2 = players.split(",");
-    const router = useRouter();
-    test.splice(0, 1);
+      return () => clearInterval(intervalId);
+    }
+  }, []);
 
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-          setPlayers(localStorage.getItem("Players"))
-        }, 1000);
-    
-        return () => clearInterval(intervalId);
-      }, []);
-      
-      
-      
-      const handleLeave = () => {
-     const positon = test.indexOf(sessionStorage.getItem("Name"))
-     console.log(positon);
-     console.log(test2);
-     test2.splice(positon+1, 1);
-     console.log(test2);
-     localStorage.setItem("Players", test2);
-     sessionStorage.setItem("Name", null);
-     router.push(`/join-game`);
+  // Handle leaving the game
+  const handleLeave = () => {
+    if (typeof window !== "undefined") {
+      const playerList = players.split(",").filter(Boolean);
+      const playerName = sessionStorage.getItem("Name");
+      const position = playerList.indexOf(playerName);
 
-
+      if (position !== -1) {
+        playerList.splice(position, 1);
+        localStorage.setItem("Players:", playerList.join(","));
       }
 
-    return (
-        <main className="min-h-screen bg-[#FFFFFF] flex flex-col items-center">
-          {/* Navigation Bar */}
-          <nav className="bg-[#8B0000] shadow-sm w-full px-10 py-6 flex justify-center">
-            <div className="max-w-screen-xl w-full px-1 text-center">
-              <h1 className="text-5xl font-bold text-[#F3B13B] mb-4">
-                Wait here until the game starts
-              </h1>
-              <p className="text-[#F3B13B] text-lg">
-                code:
-              </p>
-            </div>
-          </nav>
-          <p style={{color: "black"}}>Players</p>
-    
-
-
-          {test.map((name, index) => (
-                  <div
-                    className="centered-element"
-                    style={{ backgroundColor: 'lightblue',
-                             width: 200 }}
-                    key={index}
-                  >
-<p style={{ color: 'black' }}>{name}</p>
-                    <span className="ml-3 text-[#FFD700] text-lg">
-                    </span>
-                  </div>
-                ))}
-
-                <button onClick = {handleLeave}>Leave Game</button>
-
-
-
-          {/* Hero Section */}
-          <section className="text-center my-12">
-            <motion.div 
-              className="flex flex-wrap justify-center gap-6" 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              transition={{ duration: 0.5 }}
-            >
-              {[
-                { label: "Create Your First Set", path: "/create-set" },
-                { label: "New Game", path: "/new-game" },
-                { label: "Join A Game", path: "/join-game" },
-                { label: "Ask A Question", path: "/feedview"}
-              ].map(({ label, path }) => (
-                <motion.button
-                  key={path}
-                  onClick={() => navigateTo(path)}
-                  className="bg-[#8B0000] text-[#F3B13B] px-10 py-6 rounded-lg font-semibold 
-                  hover:bg-[#F3B13B] hover:text-[#8B0000] transition-colors transform"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  {label}
-                </motion.button>
-              ))}
-            </motion.div>
-          </section>
-
-            
-
-
-    
-           
-
-        </main>
-      );
+      sessionStorage.setItem("Name", "");
+      router.push("/join-game");
     }
-    
+  };
+
+  // Filter out empty strings from the player list
+  const playerList = players.split(",").filter(Boolean);
+
+  return (
+    <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-4xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]"
+      >
+        <h1 className="text-4xl text-[#FFD700] font-bold mb-8">
+          Waiting for the game to start...
+        </h1>
+
+        {/* Session Code Display */}
+        <div className="mb-8">
+          <h2 className="text-2xl text-[#FFD700] font-bold">
+            Session Code:{" "}
+            <span className="text-white">{sessionCode}</span>
+          </h2>
+        </div>
+
+        {/* Player List */}
+        <div className="mb-8">
+          <h2 className="text-2xl text-[#FFD700] font-bold mb-4">Players</h2>
+          <div className="space-y-4">
+            {playerList.map((name, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="bg-[#600000] p-4 rounded-lg shadow-md flex justify-between items-center"
+              >
+                <p className="text-2xl text-[#FFD700] font-semibold">{name}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Leave Game Button */}
+        <motion.button
+          onClick={handleLeave}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold transition duration-300"
+        >
+          Leave Game
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
