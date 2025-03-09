@@ -1,102 +1,134 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { db } from "../../components/firebase"; // Import Firestore instance
+import { collection, getDocs, doc, setDoc } from "firebase/firestore"; // Import Firestore functions
 
 export default function NewGame() {
-  const [sessionCode, setSessionCode] = useState('');
-  const [players, setPlayers] = useState([
-    { id: 1, name: 'John Doe' },
-    { id: 2, name: 'Jane Smith' },
-  ]);
+  const [sessionCode, setSessionCode] = useState("");
+  const [players, setPlayers] = useState([]);
   const [selectedSet, setSelectedSet] = useState(null);
   const [availableSets, setAvailableSets] = useState([]);
 
+  // Fetch all sets from Firestore
   useEffect(() => {
-    const fetchSets = () => {
+    const fetchSets = async () => {
       try {
-        const sets = JSON.parse(localStorage.getItem("userSets") || "[]");
-        if (Array.isArray(sets)) {
-          setAvailableSets(sets);
-        } else {
-          setAvailableSets([]);
-        }
+        const querySnapshot = await getDocs(collection(db, "sets"));
+        const sets = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setAvailableSets(sets);
       } catch (error) {
-        console.error("Error parsing sets from localStorage:", error);
-        setAvailableSets([]);
+        console.error("Error fetching sets: ", error);
       }
     };
 
     fetchSets();
   }, []);
 
+  // Generate a random session code and save it to Firestore
   const generateRandomCode = () => {
     const code = Math.floor(10000000 + Math.random() * 90000000).toString();
     setSessionCode(code);
-    localStorage.setItem("Session Code", code)
+    localStorage.setItem("Session Code", code);
+
+    // Save the session code to Firestore
+    const sessionRef = doc(db, "sessions", code);
+    setDoc(sessionRef, { code, players: [], selectedSet: null }, { merge: true })
+      .then(() => console.log("Session created in Firestore"))
+      .catch((error) => console.error("Error creating session: ", error));
   };
 
   useEffect(() => {
     generateRandomCode();
   }, []);
 
+  // Copy session code to clipboard
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sessionCode);
-    alert('Session code copied to clipboard!');
+    alert("Session code copied to clipboard!");
   };
 
-  const handleSetSelection = (setId) => {
-    console.log("Selected setId:", setId, "Type:", typeof setId); // Debugging
+  // Handle set selection and save it to Firestore
+  const handleSetSelection = async (setId) => {
     const selected = availableSets.find((set) => set.id === setId);
     if (selected) {
       setSelectedSet(selected);
+
+      // Save the selected set to Firestore under the session code
+      const sessionRef = doc(db, "sessions", sessionCode);
+      await setDoc(sessionRef, { selectedSet: selected }, { merge: true });
+
       alert(`Set "${selected.title}" selected successfully!`);
     } else {
       alert("Set not found. Please select a valid set.");
     }
   };
 
-  const addPlayer = () => {
+  // Add a player to the session and save it to Firestore
+  const addPlayer = async () => {
     const newPlayer = prompt("Enter the new player's name:");
     if (newPlayer) {
-      setPlayers([...players, { id: Date.now(), name: newPlayer }]);
+      const updatedPlayers = [...players, { id: Date.now(), name: newPlayer }];
+      setPlayers(updatedPlayers);
+
+      // Save the updated player list to Firestore
+      const sessionRef = doc(db, "sessions", sessionCode);
+      await setDoc(sessionRef, { players: updatedPlayers }, { merge: true });
     }
   };
 
-  const removePlayer = (id) => {
-    if (window.confirm('Are you sure you want to remove this player?')) {
-      setPlayers(players.filter(player => player.id !== id));
+  // Remove a player from the session and update Firestore
+  const removePlayer = async (id) => {
+    if (window.confirm("Are you sure you want to remove this player?")) {
+      const updatedPlayers = players.filter((player) => player.id !== id);
+      setPlayers(updatedPlayers);
+
+      // Save the updated player list to Firestore
+      const sessionRef = doc(db, "sessions", sessionCode);
+      await setDoc(sessionRef, { players: updatedPlayers }, { merge: true });
     }
   };
 
-  const editPlayerName = (id) => {
-    const newName = prompt('Enter the new name:');
+  // Edit a player's name and update Firestore
+  const editPlayerName = async (id) => {
+    const newName = prompt("Enter the new name:");
     if (newName) {
-      setPlayers(players.map(player => 
+      const updatedPlayers = players.map((player) =>
         player.id === id ? { ...player, name: newName } : player
-      ));
+      );
+      setPlayers(updatedPlayers);
+
+      // Save the updated player list to Firestore
+      const sessionRef = doc(db, "sessions", sessionCode);
+      await setDoc(sessionRef, { players: updatedPlayers }, { merge: true });
     }
   };
 
-  const resetSession = () => {
-    if (window.confirm('Are you sure you want to reset the session?')) {
+  // Reset the session and update Firestore
+  const resetSession = async () => {
+    if (window.confirm("Are you sure you want to reset the session?")) {
       setPlayers([]);
-      generateRandomCode();
       setSelectedSet(null);
+      generateRandomCode();
+
+      // Reset the session in Firestore
+      const sessionRef = doc(db, "sessions", sessionCode);
+      await setDoc(sessionRef, { players: [], selectedSet: null }, { merge: true });
     }
   };
 
+  // Start the game
   const startGame = () => {
     if (players.length < 2) {
-      alert('You need at least 2 players to start the game.');
+      alert("You need at least 2 players to start the game.");
       return;
     }
     if (!selectedSet) {
-      alert('Please select a set to start the game.');
+      alert("Please select a set to start the game.");
       return;
     }
     alert(`Game started with set: ${selectedSet.title}`);
   };
-
 
   return (
     <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
@@ -116,7 +148,7 @@ export default function NewGame() {
         <div className="mb-8">
           <label className="block text-[#FFD700] font-medium mb-2">Select a Set:</label>
           <select
-            onChange={(e) => handleSetSelection(e.target.value)} // Pass the value as-is (string)
+            onChange={(e) => handleSetSelection(e.target.value)}
             className="w-full p-3 border rounded bg-[#500000] text-[#FFD700]"
           >
             <option value="">Choose a set</option>
