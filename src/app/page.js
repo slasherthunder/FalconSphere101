@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { db } from "../components/firebase"; // Import Firestore instance
 import { collection, getDocs } from "firebase/firestore"; // Import Firestore functions
+import { FaEdit, FaGamepad, FaUsers, FaLightbulb } from "react-icons/fa"; // Import icons from react-icons
 
 export default function Home() {
   const router = useRouter();
@@ -81,40 +82,56 @@ export default function Home() {
   );
 
   return (
-    <main className="min-h-screen bg-[#FFFFFF] flex flex-col items-center">
+    <main className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#FFF5E6] flex flex-col items-center">
       {/* Navigation Bar */}
-      <nav className="bg-[#8B0000] shadow-sm w-full px-10 py-6 flex justify-center">
+      <nav className="bg-gradient-to-r from-[#8B0000] to-[#600000] shadow-lg w-full px-10 py-8 flex justify-center">
         <div className="max-w-screen-xl w-full px-1 text-center">
-          <h1 className="text-5xl font-bold text-[#F3B13B] mb-4">
+          <motion.h1 
+            className="text-6xl font-bold text-[#F3B13B] mb-4"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
             Welcome to FalconSphere!
-          </h1>
-          <p className="text-[#F3B13B] text-lg">
+          </motion.h1>
+          <motion.p 
+            className="text-[#F3B13B] text-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
             Become the academic weapon.
-          </p>
+          </motion.p>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="text-center my-12">
+      <section className="text-center my-16">
         <motion.div 
-          className="flex flex-wrap justify-center gap-6" 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          transition={{ duration: 0.5 }}
+          className="flex flex-wrap justify-center gap-8" 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
         >
           {[
-            { label: "Create Your First Set", path: "/create-set" },
-            { label: "New Game", path: "/new-game" },
-            { label: "Join A Game", path: "/join-game" },
-            { label: "Peer Help", path: "/feedview"}
-          ].map(({ label, path }) => (
+            { label: "Create Your First Set", path: "/create-set", icon: FaEdit },
+            { label: "New Game", path: "/new-game", icon: FaGamepad },
+            { label: "Join A Game", path: "/join-game", icon: FaUsers },
+            { label: "Peer Help", path: "/feedview", icon: FaLightbulb }
+          ].map(({ label, path, icon: Icon }, index) => (
             <motion.button
               key={path}
               onClick={() => navigateTo(path)}
-              className="bg-[#8B0000] text-[#F3B13B] px-10 py-6 rounded-lg font-semibold 
-              hover:bg-[#F3B13B] hover:text-[#8B0000] transition-colors transform"
-              whileHover={{ scale: 1.05 }}
+              className="bg-gradient-to-br from-[#8B0000] to-[#600000] text-[#F3B13B] px-12 py-8 rounded-xl font-semibold 
+              hover:from-[#F3B13B] hover:to-[#FFD700] hover:text-[#8B0000] transition-all duration-300 shadow-lg
+              flex flex-col items-center gap-2"
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.6 + index * 0.1 }}
             >
+              <Icon className="text-4xl" />
               {label}
             </motion.button>
           ))}
@@ -122,114 +139,170 @@ export default function Home() {
       </section>
 
       {/* Study Sets Grid */}
-      <section className="container mx-auto px-6 mb-12 w-full">
-        <h2 className="text-2xl font-bold text-[#8B0000] text-center mb-6">
+      <section className="container mx-auto px-6 mb-16 w-full">
+        <motion.h2 
+          className="text-3xl font-bold text-[#8B0000] text-center mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+        >
           Popular Study Sets
-        </h2>
+        </motion.h2>
         
         {/* Search Bar */}
-        <div className="mb-6 text-center">
-          <motion.input
-            type="text"
-            placeholder="Search Popular Sets..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-[#8B0000] text-[#F3B13B] border-2 border-[#8B0000] rounded-lg py-2 px-4 focus:outline-none focus:border-[#F3B13B] transition-all"
-            initial={{ scale: 1 }}
-            whileFocus={{ scale: 1.05 }}
-          />
+        <div className="mb-8 text-center">
+          <motion.div
+            className="max-w-2xl mx-auto"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: 0.9 }}
+          >
+            <input
+              type="text"
+              placeholder="Search Popular Sets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white text-[#8B0000] border-2 border-[#8B0000] rounded-xl py-3 px-6 
+              focus:outline-none focus:border-[#F3B13B] focus:ring-2 focus:ring-[#F3B13B] transition-all
+              placeholder-[#8B0000]/50 text-lg"
+            />
+          </motion.div>
         </div>
 
         {/* Recent Search Bar */}
-        <div className="mb-6 text-center">
-          <h3 className="text-xl font-bold text-[#8B0000] mb-4">Recent Searches</h3>
-          <div className="flex flex-wrap justify-center gap-4">
+        <div className="mb-12 text-center">
+          <motion.h3 
+            className="text-2xl font-bold text-[#8B0000] mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1 }}
+          >
+            Recent Searches
+          </motion.h3>
+          <motion.div 
+            className="flex flex-wrap justify-center gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 1.1 }}
+          >
             {recentSearches.map((set) => (
               <motion.button
                 key={set.id}
                 onClick={() => navigateTo(`/study-set/${set.id}`, set)}
-                className="bg-[#8B0000] text-[#F3B13B] px-4 py-2 rounded-lg font-semibold 
-                hover:bg-[#F3B13B] hover:text-[#8B0000] transition-colors"
-                whileHover={{ scale: 1.05 }}
+                className="bg-gradient-to-r from-[#8B0000] to-[#600000] text-[#F3B13B] px-6 py-3 rounded-xl font-semibold 
+                hover:from-[#F3B13B] hover:to-[#FFD700] hover:text-[#8B0000] transition-all duration-300 shadow-md"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
               >
                 {set.title}
               </motion.button>
             ))}
-          </div>
+          </motion.div>
         </div>
 
         {/* Display filtered sets */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-center"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.6, delay: 1.2 }}
         >
           {filteredSets.length ? (
-            filteredSets.map((set) => (
+            filteredSets.map((set, index) => (
               <motion.div
                 key={set.id}
-                className="bg-[#600000] rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-                whileHover={{ scale: 1.03 }}
+                className="bg-gradient-to-br from-[#600000] to-[#500000] rounded-xl shadow-xl p-8 
+                hover:shadow-2xl transition-all duration-300 border border-[#F3B13B]/10"
+                whileHover={{ scale: 1.03, y: -5 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 1.3 + index * 0.1 }}
               >
-                <h3 className="text-xl font-semibold text-[#F3B13B] mb-2">
-                  {set.title} {/* Display the title */}
+                <h3 className="text-2xl font-semibold text-[#F3B13B] mb-4">
+                  {set.title}
                 </h3>
-                <p className="text-[#F3B13B] mb-4">
+                <p className="text-[#F3B13B]/90 mb-6 text-lg">
                   A collection of flashcards for mastering your subject.
                 </p>
                 <motion.button
                   onClick={() => navigateTo(`/study-set/${set.id}`, set)}
-                  className="bg-[#8B0000] text-[#F3B13B] px-4 py-2 rounded-lg font-semibold 
-                  hover:bg-[#F3B13B] hover:text-[#8B0000] transition-colors"
-                  whileHover={{ scale: 1.05 }}
+                  className="w-full bg-gradient-to-r from-[#8B0000] to-[#600000] text-[#F3B13B] px-6 py-3 
+                  rounded-xl font-semibold hover:from-[#F3B13B] hover:to-[#FFD700] hover:text-[#8B0000] 
+                  transition-all duration-300 shadow-md"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   View Set
                 </motion.button>
               </motion.div>
             ))
           ) : (
-            <p className="font-bold text-[#8B0000] text-center">No study sets found.</p>
+            <motion.p 
+              className="font-bold text-[#8B0000] text-center text-xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 1.4 }}
+            >
+              No study sets found.
+            </motion.p>
           )}
         </motion.div>
       </section>
 
       {/* User's Recent Sets Section */}
-      <section className="container mx-auto px-6 mb-12 w-full">
-        <h2 className="text-2xl font-bold text-[#8B0000] text-center mb-6">
+      <section className="container mx-auto px-6 mb-16 w-full">
+        <motion.h2 
+          className="text-3xl font-bold text-[#8B0000] text-center mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.5 }}
+        >
           Your Recent Sets
-        </h2>
+        </motion.h2>
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-center"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.6, delay: 1.6 }}
         >
           {userSets.length ? (
-            userSets.map((set) => (
+            userSets.map((set, index) => (
               <motion.div
                 key={set.id}
-                className="bg-[#600000] rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-                whileHover={{ scale: 1.03 }}
+                className="bg-gradient-to-br from-[#600000] to-[#500000] rounded-xl shadow-xl p-8 
+                hover:shadow-2xl transition-all duration-300 border border-[#F3B13B]/10"
+                whileHover={{ scale: 1.03, y: -5 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 1.7 + index * 0.1 }}
               >
-                <h3 className="text-xl font-semibold text-[#F3B13B] mb-2">
-                  {set.title} {/* Display the title */}
+                <h3 className="text-2xl font-semibold text-[#F3B13B] mb-4">
+                  {set.title}
                 </h3>
-                <p className="text-[#F3B13B] mb-4">
+                <p className="text-[#F3B13B]/90 mb-6 text-lg">
                   A collection of flashcards for mastering your subject.
                 </p>
                 <motion.button
                   onClick={() => handleEditSet(set)}
-                  className="bg-[#8B0000] text-[#F3B13B] px-4 py-2 rounded-lg font-semibold 
-                  hover:bg-[#F3B13B] hover:text-[#8B0000] transition-colors"
-                  whileHover={{ scale: 1.05 }}
+                  className="w-full bg-gradient-to-r from-[#8B0000] to-[#600000] text-[#F3B13B] px-6 py-3 
+                  rounded-xl font-semibold hover:from-[#F3B13B] hover:to-[#FFD700] hover:text-[#8B0000] 
+                  transition-all duration-300 shadow-md"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   Edit Set
                 </motion.button>
               </motion.div>
             ))
           ) : (
-            <p className="font-bold text-[#8B0000] text-center">No recent sets found.</p>
+            <motion.p 
+              className="font-bold text-[#8B0000] text-center text-xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 1.8 }}
+            >
+              No recent sets found.
+            </motion.p>
           )}
         </motion.div>
       </section>
