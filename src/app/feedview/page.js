@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowUp, FaArrowDown, FaEdit, FaTrash, FaSave, FaTimes, FaReply, FaPlus, FaTags, FaHandPointUp, FaShare, FaFire, FaClock, FaThermometerHalf, FaThumbsUp, FaBold, FaItalic, FaCode, FaLink, FaUnderline } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaEdit, FaTrash, FaSave, FaTimes, FaReply, FaPlus, FaTags, FaHandPointUp, FaShare, FaFire, FaClock, FaThermometerHalf, FaThumbsUp, FaBold, FaItalic, FaCode, FaLink, FaUnderline, FaThumbsDown } from 'react-icons/fa';
 import { BsEmojiSmile, BsEmojiHeartEyes, BsEmojiAngry, BsEmojiNeutral, BsEmojiDizzy, BsEmojiLaughing, BsEmojiSunglasses, BsStars } from 'react-icons/bs';
 import { db } from '../../components/firebase'; // Import Firestore instance
 import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -50,11 +50,17 @@ const questionVariants = {
   }),
   hover: {
     scale: 1.02,
+    y: -5,
     boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
-    transition: { duration: 0.3 }
+    transition: {
+      type: "spring",
+      stiffness: 400,
+      damping: 10
+    }
   },
   tap: {
     scale: 0.98,
+    y: 0,
     boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
     transition: { duration: 0.1 }
   }
@@ -82,11 +88,12 @@ const replyVariants = {
 };
 
 const modalVariants = {
-  hidden: { opacity: 0, scale: 0.8, y: 50 },
+  hidden: { opacity: 0, scale: 0.8, y: 50, rotate: -5 },
   visible: {
     opacity: 1,
     scale: 1,
     y: 0,
+    rotate: 0,
     transition: {
       type: "spring",
       stiffness: 300,
@@ -97,6 +104,7 @@ const modalVariants = {
     opacity: 0,
     scale: 0.8,
     y: 50,
+    rotate: 5,
     transition: { duration: 0.2 }
   }
 };
@@ -136,6 +144,61 @@ const floatingButtonVariants = {
     y: 0,
     rotate: 0
   }
+};
+
+// Add new animation variants at the top
+const searchInputVariants = {
+  initial: { scale: 1 },
+  focus: {
+    scale: 1.05,
+    boxShadow: "0 0 15px rgba(255,215,0,0.3)",
+    transition: { duration: 0.3 }
+  }
+};
+
+const tagVariants = {
+  initial: { scale: 1, rotate: 0 },
+  hover: {
+    scale: 1.1,
+    rotate: [-2, 2],
+    transition: {
+      rotate: {
+        repeat: Infinity,
+        repeatType: "reverse",
+        duration: 0.3
+      }
+    }
+  },
+  tap: { scale: 0.95 }
+};
+
+const buttonVariants = {
+  initial: { scale: 1 },
+  hover: {
+    scale: 1.05,
+    y: -2,
+    transition: {
+      type: "spring",
+      stiffness: 400
+    }
+  },
+  tap: { scale: 0.95 }
+};
+
+const reactionButtonVariants = {
+  initial: { scale: 1, rotate: 0 },
+  hover: {
+    scale: 1.2,
+    rotate: [-10, 10],
+    transition: {
+      rotate: {
+        repeat: Infinity,
+        repeatType: "reverse",
+        duration: 0.5
+      }
+    }
+  },
+  tap: { scale: 0.9, rotate: 0 }
 };
 
 export default function QuestionFeed() {
@@ -261,6 +324,8 @@ export default function QuestionFeed() {
       text: newQuestion,
       tags: allTags,
       votes: 0,
+      likes: 0,
+      dislikes: 0,
       date: new Date().toISOString(),
       replies: [],
       difficulty: difficulty,
@@ -283,14 +348,20 @@ export default function QuestionFeed() {
   const handleUpvote = async (id) => {
     const questionRef = doc(db, 'questions', id);
     const question = questions.find((q) => q.id === id);
-    await updateDoc(questionRef, { votes: question.votes + 1 });
+    await updateDoc(questionRef, { 
+      likes: (question.likes || 0) + 1,
+      votes: ((question.likes || 0) + 1) - (question.dislikes || 0)
+    });
   };
 
   // Handle downvoting a question
   const handleDownvote = async (id) => {
     const questionRef = doc(db, 'questions', id);
     const question = questions.find((q) => q.id === id);
-    await updateDoc(questionRef, { votes: question.votes - 1 });
+    await updateDoc(questionRef, { 
+      dislikes: (question.dislikes || 0) + 1,
+      votes: (question.likes || 0) - ((question.dislikes || 0) + 1)
+    });
   };
 
   // Handle deleting a question
@@ -511,13 +582,9 @@ export default function QuestionFeed() {
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl text-[#FFD700] font-bold">Peer Help</h1>
           <motion.input
-            whileFocus={{
-              scale: 1.02,
-              boxShadow: "0 0 8px rgba(255,215,0,0.5)",
-              transition: {
-                duration: 0.2
-              }
-            }}
+            variants={searchInputVariants}
+            initial="initial"
+            whileFocus="focus"
             type="text"
             placeholder="Search questions or tags..."
             value={searchQuery}
@@ -562,19 +629,11 @@ export default function QuestionFeed() {
             </motion.button>
             {allTags.map((tag) => (
               <motion.button
+                variants={tagVariants}
+                initial="initial"
+                whileHover="hover"
+                whileTap="tap"
                 key={tag}
-                whileHover={{
-                  scale: 1.1,
-                  rotate: [-2, 2],
-                  transition: {
-                    rotate: {
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                      duration: 0.3
-                    }
-                  }
-                }}
-                whileTap={{ scale: 0.95 }}
                 onClick={() => setSelectedTag(tag)}
                 className={`w-full p-2 ${selectedTag === tag ? 'bg-[#FFD700] text-[#8B0000]' : 'bg-[#600000] text-[#FFD700]'} rounded-lg font-bold transition duration-300`}
               >
@@ -652,54 +711,29 @@ export default function QuestionFeed() {
                   // Display Mode
                   <div className="flex">
                     {/* Votes Section */}
-                    <div className="w-16 text-center">
-                      <motion.button
-                        whileHover={{
-                          scale: 1.2,
-                          y: -4,
-                          transition: {
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 10
-                          }
-                        }}
-                        whileTap={{
-                          scale: 0.9,
-                          y: 0,
-                          transition: {
-                            type: "spring",
-                            stiffness: 400
-                          }
-                        }}
-                        onClick={() => handleUpvote(question.id)}
-                        className="text-[#FFD700] hover:text-[#00FF00]"
-                      >
-                        <FaArrowUp />
-                      </motion.button>
-                      <span className="text-[#FFD700] text-xl">{question.votes}</span>
-                      <motion.button
-                        whileHover={{
-                          scale: 1.2,
-                          y: 4,
-                          transition: {
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 10
-                          }
-                        }}
-                        whileTap={{
-                          scale: 0.9,
-                          y: 0,
-                          transition: {
-                            type: "spring",
-                            stiffness: 400
-                          }
-                        }}
-                        onClick={() => handleDownvote(question.id)}
-                        className="text-[#FFD700] hover:text-[#FF0000]"
-                      >
-                        <FaArrowDown />
-                      </motion.button>
+                    <div className="w-20 text-center flex flex-col items-center gap-3">
+                      <div className="flex flex-col items-center">
+                        <motion.button
+                          onClick={() => handleUpvote(question.id)}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="text-[#FFD700] hover:text-[#00FF00] transition-colors duration-200 p-1"
+                        >
+                          <FaThumbsUp className="text-xl" />
+                        </motion.button>
+                        <span className="text-[#00FF00] text-sm font-bold">{question.likes || 0}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <motion.button
+                          onClick={() => handleDownvote(question.id)}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="text-[#FFD700] hover:text-[#FF0000] transition-colors duration-200 p-1"
+                        >
+                          <FaThumbsDown className="text-xl" />
+                        </motion.button>
+                        <span className="text-[#FF0000] text-sm font-bold">{question.dislikes || 0}</span>
+                      </div>
                     </div>
 
                     {/* Question Content */}
@@ -789,18 +823,10 @@ export default function QuestionFeed() {
                             className="flex flex-wrap gap-2 bg-[#700000] p-2 rounded-lg shadow-lg absolute z-10"
                           >
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'smile')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Smile"
@@ -808,18 +834,10 @@ export default function QuestionFeed() {
                               <BsEmojiSmile className="text-xl" />
                             </motion.button>
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'love')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Love"
@@ -827,18 +845,10 @@ export default function QuestionFeed() {
                               <BsEmojiHeartEyes className="text-xl" />
                             </motion.button>
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'haha')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Haha"
@@ -846,18 +856,10 @@ export default function QuestionFeed() {
                               <BsEmojiLaughing className="text-xl" />
                             </motion.button>
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'thinking')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Thinking"
@@ -865,18 +867,10 @@ export default function QuestionFeed() {
                               <BsEmojiNeutral className="text-xl" />
                             </motion.button>
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'confused')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Confused"
@@ -884,18 +878,10 @@ export default function QuestionFeed() {
                               <BsEmojiDizzy className="text-xl" />
                             </motion.button>
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'angry')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Angry"
@@ -903,18 +889,10 @@ export default function QuestionFeed() {
                               <BsEmojiAngry className="text-xl" />
                             </motion.button>
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'cool')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Cool"
@@ -922,18 +900,10 @@ export default function QuestionFeed() {
                               <BsEmojiSunglasses className="text-xl" />
                             </motion.button>
                             <motion.button
-                              whileHover={{
-                                scale: 1.3,
-                                rotate: [0, -10, 10, -10, 0],
-                                transition: {
-                                  duration: 0.5,
-                                  rotate: {
-                                    repeat: Infinity,
-                                    repeatType: "loop"
-                                  }
-                                }
-                              }}
-                              whileTap={{ scale: 0.9 }}
+                              variants={reactionButtonVariants}
+                              initial="initial"
+                              whileHover="hover"
+                              whileTap="tap"
                               onClick={() => handleReaction(question.id, 'helpful')}
                               className="text-[#FFD700] hover:text-[#FFA500] p-1"
                               title="Helpful"
@@ -1151,21 +1121,30 @@ export default function QuestionFeed() {
                                               className="flex gap-2 bg-[#600000] p-2 rounded-lg absolute z-10"
                                             >
                                               <motion.button
-                                                whileHover={{ scale: 1.2 }}
+                                                variants={reactionButtonVariants}
+                                                initial="initial"
+                                                whileHover="hover"
+                                                whileTap="tap"
                                                 onClick={() => handleReplyReaction(question.id, reply.id, 'smile')}
                                                 className="text-[#FFD700] hover:text-[#FFA500]"
                                               >
                                                 <BsEmojiSmile className="text-xl" />
                                               </motion.button>
                                               <motion.button
-                                                whileHover={{ scale: 1.2 }}
+                                                variants={reactionButtonVariants}
+                                                initial="initial"
+                                                whileHover="hover"
+                                                whileTap="tap"
                                                 onClick={() => handleReplyReaction(question.id, reply.id, 'love')}
                                                 className="text-[#FFD700] hover:text-[#FFA500]"
                                               >
                                                 <BsEmojiHeartEyes className="text-xl" />
                                               </motion.button>
                                               <motion.button
-                                                whileHover={{ scale: 1.2 }}
+                                                variants={reactionButtonVariants}
+                                                initial="initial"
+                                                whileHover="hover"
+                                                whileTap="tap"
                                                 onClick={() => handleReplyReaction(question.id, reply.id, 'helpful')}
                                                 className="text-[#FFD700] hover:text-[#FFA500]"
                                               >
