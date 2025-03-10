@@ -106,7 +106,7 @@ export default function Home() {
             { label: "Create Your First Set", path: "/create-set" },
             { label: "New Game", path: "/new-game" },
             { label: "Join A Game", path: "/join-game" },
-            { label: "Ask A Question", path: "/feedview"}
+            { label: "Peer Help", path: "/feedview"}
           ].map(({ label, path }) => (
             <motion.button
               key={path}
