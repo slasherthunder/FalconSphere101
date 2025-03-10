@@ -4,9 +4,41 @@ import { useParams, useRouter } from "next/navigation";
 import { db } from "../../../components/firebase"; // Import Firestore instance
 import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"; // Import Firestore functions
 import { Filter } from "bad-words"; // Import the profanity filter
+import { motion, AnimatePresence } from "framer-motion";
 
 // Initialize the profanity filter
 const filter = new Filter();
+
+// Add animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
+
+const buttonVariants = {
+  hover: {
+    scale: 1.05,
+    y: -2,
+    transition: {
+      type: "spring",
+      stiffness: 400
+    }
+  },
+  tap: { scale: 0.95 }
+};
 
 export default function EditSet() {
   const { id } = useParams(); // Get the set ID from the URL
@@ -214,219 +246,303 @@ export default function EditSet() {
   };
 
   if (loading) {
-    return <div className="text-[#FFD700] text-2xl">Loading...</div>; // Loading state
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+        >
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-2xl font-semibold">Loading set...</p>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
-      <div className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-6xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
-          <h2 className="text-4xl text-[#FFD700] font-bold">Edit Set</h2>
-        </div>
-
-        {error && (
-          <div className="bg-red-600 text-white p-4 rounded-lg mb-6">
-            {error}
+    <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-7xl mx-auto"
+      >
+        <motion.div 
+          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
+          whileHover={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <motion.h2 
+              className="text-5xl text-[#FFD700] font-bold"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              Edit Set
+            </motion.h2>
           </div>
-        )}
 
-        <div className="flex flex-col sm:flex-row gap-8">
-          {/* Preview Section */}
-          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
-            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Preview</h2>
-            <div className="space-y-4">
-              <div className="text-[#FFD700] text-3xl font-semibold mb-2">
-                {title || "Name of Set"}
-              </div>
-              <div className="text-[#FFD700] text-lg font-semibold">
-                {currentSlide.question || "Question:"}
-              </div>
-              {currentSlide.image && (
-                <div
-                  className="relative overflow-hidden rounded"
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                  }}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-600/90 backdrop-blur-sm text-white p-4 rounded-lg mb-6 shadow-lg"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Preview Section */}
+            <motion.div
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+            >
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Preview</h2>
+              <motion.div 
+                className="space-y-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <motion.div 
+                  className="text-[#FFD700] text-4xl font-semibold mb-4"
+                  whileHover={{ scale: 1.01 }}
                 >
-                  <img
-                    src={currentSlide.image}
-                    alt="Question"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    onClick={handleRemoveImage}
-                    aria-label="Remove Image"
-                    className="absolute top-2 right-2 bg-red-600 text-white w-8 h-8 flex items-center justify-center rounded-full transition duration-300 ease-in-out transform hover:bg-red-700 hover:scale-105"
+                  {title || "Name of Set"}
+                </motion.div>
+                <motion.div 
+                  className="text-[#FFD700] text-xl font-semibold"
+                  whileHover={{ scale: 1.01 }}
+                >
+                  {currentSlide.question || "Question:"}
+                </motion.div>
+                {currentSlide.image && (
+                  <motion.div
+                    className="relative overflow-hidden rounded-xl"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.3 }}
                   >
-                    ×
-                  </button>
-                </div>
-              )}
-              <div className="space-y-2">
-                {currentSlide.options.map((option, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center p-3 rounded-lg border border-[#FFD700] bg-[#500000]"
-                  >
-                    <input
-                      type="radio"
-                      name="preview-answer"
-                      value={option}
-                      checked={option === currentSlide.correctAnswer}
-                      readOnly
-                      className="form-radio h-5 w-5 text-[#FFD700] border-2 border-[#FFD700]"
+                    <img
+                      src={currentSlide.image}
+                      alt="Question"
+                      className="w-full h-full object-cover rounded-xl shadow-lg"
                     />
-                    <span className="ml-3 text-[#FFD700] text-lg">
-                      {option || `Option ${index + 1}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Edit Section */}
-          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
-            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Edit Set</h2>
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-              {/* Set Title */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Title:</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                  placeholder="Enter title"
-                />
-              </div>
-
-              {/* Slide Navigation */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Slide:</label>
-                <div className="flex gap-2">
-                  {slides.map((_, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setCurrentSlideIndex(index)}
-                        className={`px-4 py-2 rounded-lg font-bold ${
-                          currentSlideIndex === index
-                            ? "bg-[#FFD700] text-[#8B0000]"
-                            : "bg-[#500000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
-                        } transition duration-300`}
-                      >
-                        {index + 1}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSlide(index)}
-                        className="bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 transition duration-300"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={handleAddSlide}
-                    className="px-4 py-2 rounded-lg font-bold bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition duration-300"
-                    aria-label="Add Slide"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* Question */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Question:</label>
-                <input
-                  type="text"
-                  value={currentSlide.question}
-                  onChange={(e) => handleQuestionChange(e.target.value)}
-                  className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                  placeholder="Enter your question"
-                />
-              </div>
-
-              {/* Image */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Image:</label>
-                <input
-                  type="file"
-                  onChange={handleImageChange}
-                  className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                />
-              </div>
-
-              {/* Options */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Options:</label>
-                {currentSlide.options.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="text"
-                      value={option}
-                      onChange={(e) => handleOptionChange(index, e.target.value)}
-                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                      placeholder={`Enter a possible answer`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveOption(index)}
-                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-300"
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 bg-red-600/90 backdrop-blur-sm text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg"
                     >
                       ×
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleAddOption}
-                  className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
-                >
-                  Add Option
-                </button>
-              </div>
-
-              {/* Correct Answer */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Correct Answer:</label>
-                <select
-                  value={currentSlide.correctAnswer}
-                  onChange={(e) => handleCorrectAnswerChange(e.target.value)}
-                  className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                >
-                  <option value="">Select correct answer</option>
+                    </motion.button>
+                  </motion.div>
+                )}
+                <div className="space-y-3">
                   {currentSlide.options.map((option, index) => (
-                    <option key={index} value={option}>
-                      {option || `Option ${index + 1}`}
-                    </option>
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center p-4 rounded-xl border-2 border-[#FFD700] bg-[#500000]/70 backdrop-blur-sm shadow-lg"
+                    >
+                      <input
+                        type="radio"
+                        name="preview-answer"
+                        value={option}
+                        checked={option === currentSlide.correctAnswer}
+                        readOnly
+                        className="form-radio h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
+                      />
+                      <span className="ml-4 text-[#FFD700] text-lg">
+                        {option || `Option ${index + 1}`}
+                      </span>
+                    </motion.div>
                   ))}
-                </select>
-              </div>
+                </div>
+              </motion.div>
+            </motion.div>
 
-              {/* Save Set Button */}
-              <button
-                onClick={handleSaveSet}
-                className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
-              >
-                Save Set
-              </button>
+            {/* Edit Section */}
+            <motion.div
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+            >
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Edit Set</h2>
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
+                {/* Set Title */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Title:</label>
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    placeholder="Enter title"
+                  />
+                </div>
 
-              {/* Delete Set Button */}
-              <button
-                onClick={handleDeleteSet}
-                className="bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 transition duration-300 transform hover:scale-110"
-              >
-                Delete Set
-              </button>
-            </form>
+                {/* Slide Navigation */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Slide:</label>
+                  <div className="flex flex-wrap gap-3">
+                    {slides.map((_, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <motion.button
+                          variants={buttonVariants}
+                          whileHover="hover"
+                          whileTap="tap"
+                          type="button"
+                          onClick={() => setCurrentSlideIndex(index)}
+                          className={`px-5 py-3 rounded-xl font-bold shadow-lg ${
+                            currentSlideIndex === index
+                              ? "bg-[#FFD700] text-[#8B0000]"
+                              : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                          } transition-all duration-300`}
+                        >
+                          {index + 1}
+                        </motion.button>
+                        <motion.button
+                          variants={buttonVariants}
+                          whileHover="hover"
+                          whileTap="tap"
+                          type="button"
+                          onClick={() => handleDeleteSlide(index)}
+                          className="bg-red-600/90 text-white w-10 h-10 rounded-xl hover:bg-red-700 transition-all duration-300 shadow-lg"
+                        >
+                          ×
+                        </motion.button>
+                      </div>
+                    ))}
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      type="button"
+                      onClick={handleAddSlide}
+                      className="px-5 py-3 rounded-xl font-bold bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition-all duration-300 shadow-lg"
+                    >
+                      +
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Question */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Question:</label>
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type="text"
+                    value={currentSlide.question}
+                    onChange={(e) => handleQuestionChange(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    placeholder="Enter your question"
+                  />
+                </div>
+
+                {/* Image */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Image:</label>
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type="file"
+                    onChange={handleImageChange}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#FFD700] file:text-[#8B0000] hover:file:bg-[#FFC300]"
+                  />
+                </div>
+
+                {/* Options */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Options:</label>
+                  <div className="space-y-3">
+                    {currentSlide.options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <motion.input
+                          whileFocus={{ scale: 1.02 }}
+                          type="text"
+                          value={option}
+                          onChange={(e) => handleOptionChange(index, e.target.value)}
+                          className="flex-1 p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                          placeholder={`Enter a possible answer`}
+                        />
+                        <motion.button
+                          variants={buttonVariants}
+                          whileHover="hover"
+                          whileTap="tap"
+                          type="button"
+                          onClick={() => handleRemoveOption(index)}
+                          className="bg-red-600/90 text-white w-12 h-12 rounded-xl hover:bg-red-700 transition-all duration-300 shadow-lg"
+                        >
+                          ×
+                        </motion.button>
+                      </div>
+                    ))}
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      type="button"
+                      onClick={handleAddOption}
+                      className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold hover:bg-[#FFC300] transition-all duration-300 shadow-lg"
+                    >
+                      Add Option
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Correct Answer */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Correct Answer:</label>
+                  <motion.select
+                    whileFocus={{ scale: 1.02 }}
+                    value={currentSlide.correctAnswer}
+                    onChange={(e) => handleCorrectAnswerChange(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                  >
+                    <option value="">Select correct answer</option>
+                    {currentSlide.options.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option || `Option ${index + 1}`}
+                      </option>
+                    ))}
+                  </motion.select>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-4">
+                  <motion.button
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                    onClick={handleSaveSet}
+                    className="w-full bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                  >
+                    Save Set
+                  </motion.button>
+                  <motion.button
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                    onClick={handleDeleteSet}
+                    className="w-full bg-red-600/90 text-white px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-red-700 transition-all duration-300"
+                  >
+                    Delete Set
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
