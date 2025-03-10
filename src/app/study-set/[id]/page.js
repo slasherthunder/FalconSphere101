@@ -3,7 +3,38 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "../../../components/firebase"; // Import Firestore instance
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
-import { motion } from "framer-motion"; // For animations
+import { motion, AnimatePresence } from "framer-motion"; // For animations
+
+// Add animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
+
+const buttonVariants = {
+  hover: {
+    scale: 1.05,
+    y: -2,
+    transition: {
+      type: "spring",
+      stiffness: 400
+    }
+  },
+  tap: { scale: 0.95 }
+};
 
 export default function StudySet() {
   const { id } = useParams(); // Get the set ID from the URL
@@ -93,18 +124,45 @@ export default function StudySet() {
     router.push(`/study-set/play/${id}`);
   };
 
+  // Add new function to handle copying set
+  const handleCopySet = () => {
+    // Store the set data in localStorage
+    localStorage.setItem('copiedSet', JSON.stringify({
+      ...setData,
+      title: `${setData.title} (Copy)`, // Add "(Copy)" to the title
+      createdAt: new Date().toISOString(), // Update creation date
+    }));
+    // Navigate to create page
+    router.push('/create-set');
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#8B0000] py-8 flex items-center justify-center">
-        <p className="text-[#FFD700] text-2xl">Loading...</p>
+      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+        >
+          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#FFD700] text-2xl font-semibold">Loading set...</p>
+        </motion.div>
       </div>
     );
   }
 
   if (!setData) {
     return (
-      <div className="min-h-screen bg-[#8B0000] py-8 flex items-center justify-center">
-        <p className="text-[#FFD700] text-2xl">Set not found.</p>
+      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+        >
+          <p className="text-[#FFD700] text-2xl font-semibold">Set not found.</p>
+        </motion.div>
       </div>
     );
   }
@@ -112,162 +170,231 @@ export default function StudySet() {
   const currentSlide = setData.slides[currentSlideIndex];
 
   return (
-    <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
-      <div className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-6xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
-          <h2 className="text-4xl text-[#FFD700] font-bold">Study Set: {setData.title}</h2>
-          <button
-            onClick={navigateToPlaySet}
-            className="mt-4 sm:mt-0 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
-          >
-            Play Set
-          </button>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-8">
-          {/* Preview Section (Left Side) */}
-          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
-            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Preview</h2>
-            <div className="space-y-4">
-              <div className="text-[#FFD700] text-3xl font-semibold mb-2">
-                {setData.title}
-              </div>
-              <div className="text-[#FFD700] text-lg font-semibold">
-                {currentSlide.question || "Question:"}
-              </div>
-              {currentSlide.image && (
-                <div
-                  className="relative overflow-hidden rounded"
-                  style={{
-                    width: `${imageBoxSize.width}${imageBoxSize.unit}`,
-                    height: `${imageBoxSize.height}${imageBoxSize.unit}`,
-                  }}
-                >
-                  <img
-                    src={currentSlide.image}
-                    alt="Question"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <div className="space-y-2">
-                {currentSlide.options.map((option, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center p-3 rounded-lg border ${
-                      option === currentSlide.correctAnswer
-                        ? "border-green-500 bg-green-900"
-                        : "border-[#FFD700] bg-[#500000]"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="preview-answer"
-                      value={option}
-                      checked={option === selectedAnswer}
-                      onChange={() => handleAnswerSelect(option)}
-                      className="form-radio h-5 w-5 text-[#FFD700] border-2 border-[#FFD700]"
-                    />
-                    <span className="ml-3 text-[#FFD700] text-lg">
-                      {option || `Option ${index + 1}`}
-                    </span>
-                  </div>
-                ))}
-              </div>
+    <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-7xl mx-auto"
+      >
+        <motion.div 
+          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
+          whileHover={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <motion.h2 
+              className="text-5xl text-[#FFD700] font-bold"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              Study Set: {setData.title}
+            </motion.h2>
+            <div className="flex flex-col sm:flex-row gap-4 mt-4 sm:mt-0">
+              <motion.button
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                onClick={handleCopySet}
+                className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+              >
+                Copy Set
+              </motion.button>
+              <motion.button
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                onClick={navigateToPlaySet}
+                className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+              >
+                Play Set
+              </motion.button>
             </div>
           </div>
 
-          {/* Information Section (Right Side) */}
-          <div className="w-full sm:w-1/2 p-6 bg-[#600000] rounded-lg">
-            <h2 className="text-2xl text-[#FFD700] font-bold mb-6">Slide Information</h2>
-            <div className="space-y-6">
-              {/* Slide Navigation */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Slide:</label>
-                <div className="flex gap-2">
-                  {setData.slides.map((_, index) => (
-                    <button
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Preview Section */}
+            <motion.div
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+            >
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Preview</h2>
+              <motion.div 
+                className="space-y-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <motion.div 
+                  className="text-[#FFD700] text-4xl font-semibold mb-4"
+                  whileHover={{ scale: 1.01 }}
+                >
+                  {setData.title}
+                </motion.div>
+                <motion.div 
+                  className="text-[#FFD700] text-xl font-semibold"
+                  whileHover={{ scale: 1.01 }}
+                >
+                  {currentSlide.question || "Question:"}
+                </motion.div>
+                {currentSlide.image && (
+                  <motion.div
+                    className="relative overflow-hidden rounded-xl"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                      width: `${imageBoxSize.width}${imageBoxSize.unit}`,
+                      height: `${imageBoxSize.height}${imageBoxSize.unit}`,
+                    }}
+                  >
+                    <img
+                      src={currentSlide.image}
+                      alt="Question"
+                      className="w-full h-full object-cover rounded-xl shadow-lg"
+                    />
+                  </motion.div>
+                )}
+                <div className="space-y-3">
+                  {currentSlide.options.map((option, index) => (
+                    <motion.div
                       key={index}
-                      type="button"
-                      onClick={() => setCurrentSlideIndex(index)}
-                      className={`px-4 py-2 rounded-lg font-bold ${
-                        currentSlideIndex === index
-                          ? "bg-[#FFD700] text-[#8B0000]"
-                          : "bg-[#500000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
-                      } transition duration-300`}
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex items-center p-4 rounded-xl border-2 ${
+                        option === currentSlide.correctAnswer
+                          ? "border-green-500 bg-green-900/50"
+                          : "border-[#FFD700] bg-[#500000]/70"
+                      } backdrop-blur-sm shadow-lg`}
                     >
-                      {index + 1}
-                    </button>
+                      <input
+                        type="radio"
+                        name="preview-answer"
+                        value={option}
+                        checked={option === selectedAnswer}
+                        onChange={() => handleAnswerSelect(option)}
+                        className="form-radio h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
+                      />
+                      <span className="ml-4 text-[#FFD700] text-lg">
+                        {option || `Option ${index + 1}`}
+                      </span>
+                    </motion.div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
+            </motion.div>
 
-              {/* Correct Answer */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Correct Answer:</label>
-                <div className="p-3 bg-[#500000] rounded-lg border border-[#FFD700] text-[#FFD700]">
-                  {currentSlide.correctAnswer || "No correct answer set"}
-                </div>
-              </div>
-
-              {/* Image Box Size */}
-              <div>
-                <label className="block text-[#FFD700] font-medium mb-2">Image Box Size:</label>
-                <div className="flex gap-4">
-                  <div>
-                    <label className="block text-[#FFD700] font-medium mb-2">Width:</label>
-                    <input
-                      type="number"
-                      value={imageBoxSize.width}
-                      onChange={(e) =>
-                        setImageBoxSize((prev) => ({ ...prev, width: e.target.value }))
-                      }
-                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                      placeholder="Width"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#FFD700] font-medium mb-2">Height:</label>
-                    <input
-                      type="number"
-                      value={imageBoxSize.height}
-                      onChange={(e) =>
-                        setImageBoxSize((prev) => ({ ...prev, height: e.target.value }))
-                      }
-                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                      placeholder="Height"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#FFD700] font-medium mb-2">Unit:</label>
-                    <select
-                      value={imageBoxSize.unit}
-                      onChange={(e) =>
-                        setImageBoxSize((prev) => ({ ...prev, unit: e.target.value }))
-                      }
-                      className="w-full p-3 border rounded bg-[#500000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                    >
-                      <option value="%">%</option>
-                      <option value="px">px</option>
-                      <option value="rem">rem</option>
-                    </select>
+            {/* Information Section */}
+            <motion.div
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+            >
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Slide Information</h2>
+              <div className="space-y-8">
+                {/* Slide Navigation */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Slide:</label>
+                  <div className="flex flex-wrap gap-3">
+                    {setData.slides.map((_, index) => (
+                      <motion.button
+                        key={index}
+                        variants={buttonVariants}
+                        whileHover="hover"
+                        whileTap="tap"
+                        type="button"
+                        onClick={() => setCurrentSlideIndex(index)}
+                        className={`px-5 py-3 rounded-xl font-bold shadow-lg ${
+                          currentSlideIndex === index
+                            ? "bg-[#FFD700] text-[#8B0000]"
+                            : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                        } transition-all duration-300`}
+                      >
+                        {index + 1}
+                      </motion.button>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              {/* Download Set Button */}
-              <button
-                onClick={downloadSet}
-                className="mt-6 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold hover:bg-[#FFC300] transition duration-300 transform hover:scale-110"
-              >
-                Download Set
-              </button>
-            </div>
+                {/* Correct Answer */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Correct Answer:</label>
+                  <motion.div 
+                    className="p-4 bg-[#500000]/70 backdrop-blur-sm rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg"
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    {currentSlide.correctAnswer || "No correct answer set"}
+                  </motion.div>
+                </div>
+
+                {/* Image Box Size */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Image Box Size:</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[#FFD700] text-sm font-medium mb-2">Width:</label>
+                      <motion.input
+                        whileFocus={{ scale: 1.02 }}
+                        type="number"
+                        value={imageBoxSize.width}
+                        onChange={(e) =>
+                          setImageBoxSize((prev) => ({ ...prev, width: e.target.value }))
+                        }
+                        className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                        placeholder="Width"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[#FFD700] text-sm font-medium mb-2">Height:</label>
+                      <motion.input
+                        whileFocus={{ scale: 1.02 }}
+                        type="number"
+                        value={imageBoxSize.height}
+                        onChange={(e) =>
+                          setImageBoxSize((prev) => ({ ...prev, height: e.target.value }))
+                        }
+                        className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                        placeholder="Height"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[#FFD700] text-sm font-medium mb-2">Unit:</label>
+                      <motion.select
+                        whileFocus={{ scale: 1.02 }}
+                        value={imageBoxSize.unit}
+                        onChange={(e) =>
+                          setImageBoxSize((prev) => ({ ...prev, unit: e.target.value }))
+                        }
+                        className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                      >
+                        <option value="%">%</option>
+                        <option value="px">px</option>
+                        <option value="rem">rem</option>
+                      </motion.select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Download Set Button */}
+                <motion.button
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={downloadSet}
+                  className="w-full bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                >
+                  Download Set
+                </motion.button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
