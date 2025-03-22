@@ -23,10 +23,10 @@ io.on("connection", (socket) => {
 
 
     console.log("A user connected:", socket.id);
-
-    socket.on("Send_message", (data) => {
-        console.log("Message received:", data.message);
-        socket.broadcast.emit("receive-message", data.message);
+    //Recieve text message and send response as broadcast
+    socket.on("sendMessage", (data) => {
+        console.log(data)
+        socket.broadcast.emit("recieveMessage", data);
     });
 
     socket.on("disconnect", () => {
