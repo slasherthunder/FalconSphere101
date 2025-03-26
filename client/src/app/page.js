@@ -6,8 +6,11 @@ import { db } from "../components/firebase"; // Import Firestore instance
 import { collection, getDocs } from "firebase/firestore"; // Import Firestore functions
 import { FaEdit, FaGamepad, FaUsers, FaLightbulb } from "react-icons/fa"; // Import icons from react-icons
 
+import { GetUserID } from "./getID";
 
 export default function Home() {
+
+  const ID = Math.floor(10000000 + Math.random() * 90000000).toString();
 
   
   const router = useRouter();
@@ -100,7 +103,6 @@ export default function Home() {
 
 
 
-
     <main className="min-h-screen bg-gradient-to-b from-[#FFFFFF] to-[#FFF5E6] flex flex-col items-center">
                
       {/* Navigation Bar */}
@@ -135,7 +137,7 @@ export default function Home() {
         >
           {[
             { label: "Create Your First Set", path: "/create-set", icon: FaEdit },
-            { label: "New Game", path: "/new-game", icon: FaGamepad },
+            { label: "New Game", path: "/dynamic-page/new-test/" + ID, icon: FaGamepad },
             { label: "Join A Game", path: "/join-game", icon: FaUsers },
             { label: "Peer Help", path: "/feedview", icon: FaLightbulb }
           ].map(({ label, path, icon: Icon }, index) => (

@@ -20,6 +20,21 @@ io.on("connection", (socket) => {
         socket.emit("SendID", socket.id)
     });
 
+    socket.on("Add Player", (data) => {
+       socket.emit("SendPlayerData", data);
+    });
+
+
+    socket.on("StartGame", (urlID) =>{
+        socket.broadcast.emit("ChangeGameScreen", urlID)
+    });
+
+    //handles changing host view information for current slide number
+    socket.on("Next Slide", (slideData) =>{
+        console.log("Hello")
+        socket.broadcast.emit("ChangeSlideNumber", slideData)
+    });
+
 
 
     console.log("A user connected:", socket.id);

@@ -5,6 +5,10 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { FaExclamationTriangle } from 'react-icons/fa';
 
+import { io } from 'socket.io-client';
+
+const socket = io("http://localhost:5000");
+
 // Bad words list and filtering functions
 const badWords = [
   // Common inappropriate words
@@ -95,25 +99,41 @@ export default function JoinGame() {
     }
 
     // Validate session code
-    setActiveSessionCode(localStorage.getItem("Session Code"));
-    if (sessionCode !== activeSessionCode) {
+
+    if (sessionCode !== localStorage.getItem("Session Code")) {
       setError("No sessions exist with that code");
       return;
     }
 
     // All validations passed, proceed with joining
-    router.push(`/game-wait`);
-    setSavedValues(playerName);
+    router.push(`/dynamic-page/new-test/` + localStorage.getItem("PossibleSession"));
+    sessionStorage.setItem("name", playerName)
+    const JoinData = {
+      name: playerName,
+      // id: localStorage.getItem("PossibleSession"),
+      slideNumber: 0,
+    }
+    const localPlayerData = JSON.parse(localStorage.getItem("PlayerData"))
+    const totalPlayerData = [...localPlayerData, JoinData]
+    socket.emit("Add Player", totalPlayerData);
+  
+    // setSavedValues(playerName);
   };
-
-  const setSavedValues = (name) => {
-    setPlayers([players, name]);
-    sessionStorage.setItem("Name", name);
-  };
-
   useEffect(() => {
-    localStorage.setItem("Players", players);
-  }, [players]);
+    socket.on("SendPlayerData", (data) => {
+      const perfection = JSON.stringify(data);
+      localStorage.setItem("PlayerData", perfection);
+    });
+   }, [socket]);
+
+  // const setSavedValues = (name) => {
+  //   setPlayers([players, name]);
+  //   sessionStorage.setItem("Name", name);
+  // };
+
+  // useEffect(() => {
+  //   localStorage.setItem("Players", players);
+  // }, [players]);
 
   return (
     <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">

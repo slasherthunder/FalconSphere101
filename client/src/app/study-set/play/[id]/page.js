@@ -5,6 +5,10 @@ import { db } from "../../../../components/firebase"; // Import Firestore instan
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion, AnimatePresence } from "framer-motion"; // Import framer-motion
 
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:5000");
+
 // Add new animation variants
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -85,6 +89,10 @@ export default function PlaySet() {
 
     // Move to the next question
     if (currentSlideIndex < setData.slides.length - 1) {
+      //sends data to server on what current question a user is on
+      socket.emit("Next Slide", {slide: currentSlideIndex + 1, name: sessionStorage.getItem("name")});
+
+
       setCurrentSlideIndex(currentSlideIndex + 1);
       setSelectedAnswer(""); // Reset selected answer for the next question
     } else {
