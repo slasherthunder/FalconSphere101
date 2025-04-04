@@ -53,6 +53,18 @@ export default function PlaySet() {
   const [score, setScore] = useState(0); // Track user's score
   const [showResult, setShowResult] = useState(false); // Show result after quiz ends
 
+  useEffect (() => {
+    const listOfObject = localStorage.getItem("PlayerData")
+    const listOfObjects = JSON.parse(listOfObject);
+    sessionStorage.setItem("currentGameSetID", id)
+    const name = sessionStorage.getItem("name")
+
+    const index = listOfObjects.findIndex(obj => obj.name === name);
+    const slideNum = listOfObjects[index].slideNumber
+    setCurrentSlideIndex(slideNum)
+
+  }, []);
+
   // Fetch the set data from Firestore
   useEffect(() => {
     const fetchSetData = async () => {
@@ -91,6 +103,7 @@ export default function PlaySet() {
     if (currentSlideIndex < setData.slides.length - 1) {
       //sends data to server on what current question a user is on
       socket.emit("Next Slide", {slide: currentSlideIndex + 1, name: sessionStorage.getItem("name")});
+      router.push("/./wait-for-next-question")
 
 
       setCurrentSlideIndex(currentSlideIndex + 1);

@@ -32,7 +32,6 @@ export default function HostView({ params }) {
             player.name === slideData.name ? { ...player, slideNumber: slideData.slide } : player
           )
         );
-    
       })
   }, [socket]);
   
@@ -48,12 +47,14 @@ export default function HostView({ params }) {
   
 const [hasUpdated, setHasUpdated]= useState(false);
   useEffect(() =>{
+    
     if (!hasUpdated){
+      setHasUpdated(true)
       return;
     }else{
-      setHasUpdated(true)
+      localStorage.setItem("PlayerData", JSON.stringify(PlayerData))
+
     }
-    localStorage.setItem("PlayerData", JSON.stringify(PlayerData))
   }, [PlayerData]);
 
   useEffect(() => {
@@ -98,6 +99,21 @@ const [hasUpdated, setHasUpdated]= useState(false);
       }
     }
   };
+
+
+  const handleNextQuestion = () =>{
+    // router.push("/wait-for-next-question")
+    socket.emit("SendPlayersToNextQuestion")
+  }
+
+  useEffect (() => {
+    console.log("Whats good")
+    socket.on("ConfirmSendQuestionRequest", () => {
+      localStorage.setItem("isNext", true)
+    });
+
+  }, [socket]);
+
 
   if (loading) {
     return (
@@ -184,6 +200,7 @@ const [hasUpdated, setHasUpdated]= useState(false);
             {(!session?.players || session.players.length === 0) && (
               <p className="text-[#FFD700]/60 text-center py-4">Waiting for players to join...</p>
             )}
+            <button onClick={handleNextQuestion}>Allow Next Question</button>
           </div>
         </motion.div>
 

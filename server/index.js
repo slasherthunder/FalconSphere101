@@ -36,6 +36,13 @@ io.on("connection", (socket) => {
     });
 
 
+    //Handles next question when host allows
+    socket.on("SendPlayersToNextQuestion", () => {
+socket.emit("ConfirmSendQuestionRequest")
+
+    });
+
+
 
     console.log("A user connected:", socket.id);
     //Recieve text message and send response as broadcast
