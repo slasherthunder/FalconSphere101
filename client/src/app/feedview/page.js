@@ -612,13 +612,15 @@ export default function QuestionFeed() {
                         <motion.button
                           onClick={() => handleUpvote(question.id)}
                           whileHover={{ scale: 1.05 }}
-                          className={`text-[#FFD700] ${
+                          className={`text-xl p-1 ${
                             hasVoted(question.id, "like")
-                              ? "text-[#00FF00]"
-                              : "hover:text-[#00FF00]"
-                          } transition-colors duration-200 p-1`}
+                              ? "text-[#00FF00]" // Green when liked
+                              : hasVoted(question.id, "dislike")
+                              ? "text-gray-400" // Gray when disliked (but still show upvote button)
+                              : "text-[#FFD700] hover:text-[#00FF00]" // Yellow by default, green on hover
+                          } transition-colors duration-200`}
                         >
-                          <FaThumbsUp className="text-xl" />
+                          <FaThumbsUp />
                         </motion.button>
                         <span className="text-[#00FF00] text-sm font-bold">
                           {question.likes || 0}
@@ -628,13 +630,15 @@ export default function QuestionFeed() {
                         <motion.button
                           onClick={() => handleDownvote(question.id)}
                           whileHover={{ scale: 1.05 }}
-                          className={`text-[#FFD700] ${
+                          className={`text-xl p-1 ${
                             hasVoted(question.id, "dislike")
-                              ? "text-[#FF0000]"
-                              : "hover:text-[#FF0000]"
-                          } transition-colors duration-200 p-1`}
+                              ? "text-[#FF0000]" // Red when disliked
+                              : hasVoted(question.id, "like")
+                              ? "text-gray-400" // Gray when liked (but still show downvote button)
+                              : "text-[#FFD700] hover:text-[#FF0000]" // Yellow by default, red on hover
+                          } transition-colors duration-200`}
                         >
-                          <FaThumbsDown className="text-xl" />
+                          <FaThumbsDown />
                         </motion.button>
                         <span className="text-[#FF0000] text-sm font-bold">
                           {question.dislikes || 0}
