@@ -195,17 +195,28 @@ export default function QuestionFeed() {
   };
 
   const handleUpvote = async (id) => {
-    if (hasVoted(id, "like")) return;
-
     const votes = JSON.parse(localStorage.getItem("votes") || "{}");
     const questionRef = doc(db, "questions", id);
     const question = questions.find((q) => q.id === id);
 
-    let newLikes = (question.likes || 0) + 1;
+    let newLikes = question.likes || 0;
     let newDislikes = question.dislikes || 0;
 
-    if (votes[id] === "dislike") {
-      newDislikes = Math.max(0, (question.dislikes || 0) - 1);
+    // If already liked, remove the like (toggle off)
+    if (votes[id] === "like") {
+      newLikes = Math.max(0, newLikes - 1);
+      delete votes[id]; // Remove the vote entirely
+    } 
+    // If disliked, switch to like
+    else if (votes[id] === "dislike") {
+      newDislikes = Math.max(0, newDislikes - 1);
+      newLikes += 1;
+      votes[id] = "like";
+    }
+    // If no vote, add a like
+    else {
+      newLikes += 1;
+      votes[id] = "like";
     }
 
     await updateDoc(questionRef, {
@@ -214,31 +225,40 @@ export default function QuestionFeed() {
       votes: newLikes - newDislikes,
     });
 
-    votes[id] = "like";
     localStorage.setItem("votes", JSON.stringify(votes));
   };
 
   const handleDownvote = async (id) => {
-    if (hasVoted(id, "dislike")) return;
-
     const votes = JSON.parse(localStorage.getItem("votes") || "{}");
     const questionRef = doc(db, "questions", id);
     const question = questions.find((q) => q.id === id);
 
-    let newDislikes = (question.dislikes || 0) + 1;
     let newLikes = question.likes || 0;
+    let newDislikes = question.dislikes || 0;
 
-    if (votes[id] === "like") {
-      newLikes = Math.max(0, (question.likes || 0) - 1);
+    // If already disliked, remove the dislike (toggle off)
+    if (votes[id] === "dislike") {
+      newDislikes = Math.max(0, newDislikes - 1);
+      delete votes[id]; // Remove the vote entirely
+    } 
+    // If liked, switch to dislike
+    else if (votes[id] === "like") {
+      newLikes = Math.max(0, newLikes - 1);
+      newDislikes += 1;
+      votes[id] = "dislike";
+    }
+    // If no vote, add a dislike
+    else {
+      newDislikes += 1;
+      votes[id] = "dislike";
     }
 
     await updateDoc(questionRef, {
-      dislikes: newDislikes,
       likes: newLikes,
+      dislikes: newDislikes,
       votes: newLikes - newDislikes,
     });
 
-    votes[id] = "dislike";
     localStorage.setItem("votes", JSON.stringify(votes));
   };
 
@@ -597,7 +617,6 @@ export default function QuestionFeed() {
                               ? "text-[#00FF00]"
                               : "hover:text-[#00FF00]"
                           } transition-colors duration-200 p-1`}
-                          disabled={hasVoted(question.id, "like")}
                         >
                           <FaThumbsUp className="text-xl" />
                         </motion.button>
@@ -614,7 +633,6 @@ export default function QuestionFeed() {
                               ? "text-[#FF0000]"
                               : "hover:text-[#FF0000]"
                           } transition-colors duration-200 p-1`}
-                          disabled={hasVoted(question.id, "dislike")}
                         >
                           <FaThumbsDown className="text-xl" />
                         </motion.button>
