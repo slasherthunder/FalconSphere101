@@ -44,6 +44,24 @@ const optionVariants = {
 };
 
 export default function PlaySet() {
+  const [timer, setTimer] = useState(60) // the varible that stores current time of timer in seconds
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setTimer(timer - 1);
+  //   }, 1000);
+
+  //   // Cleanup to prevent memory leaks
+  //   return () => clearInterval(interval);
+  // }, []); 
+  useEffect(() => {
+    setTimeout(() => {
+       setTimer(timer -1);
+       if(timer == 1){
+        router.push("/./wait-for-next-question")
+      }
+    }, 1000);  }, [timer])
+
+
   const { id } = useParams(); // Get the set ID from the URL
   const router = useRouter(); // Initialize the router
   const [setData, setSetData] = useState(null); // State to store the set data
@@ -97,12 +115,13 @@ export default function PlaySet() {
   const handleNextQuestion = () => {
     if (selectedAnswer === setData.slides[currentSlideIndex].correctAnswer) {
       setScore(score + 1); // Increment score if the answer is correct
+      
     }
 
     // Move to the next question
     if (currentSlideIndex < setData.slides.length - 1) {
       //sends data to server on what current question a user is on
-      socket.emit("Next Slide", {slide: currentSlideIndex + 1, name: sessionStorage.getItem("name")});
+      socket.emit("Next Slide", {slide: currentSlideIndex + 1, name: sessionStorage.getItem("name"), score: score});
       router.push("/./wait-for-next-question")
 
 
@@ -174,7 +193,7 @@ export default function PlaySet() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              {setData.title}
+              {setData.title}    {timer}
             </motion.h2>
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}

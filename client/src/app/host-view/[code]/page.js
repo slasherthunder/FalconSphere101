@@ -29,7 +29,7 @@ export default function HostView({ params }) {
       console.log("Gottem")
       setPlayerData((PlayerData) =>
           PlayerData.map((player) =>
-            player.name === slideData.name ? { ...player, slideNumber: slideData.slide } : player
+            player.name === slideData.name ? { ...player, slideNumber: slideData.slide, score: slideData.score } : player
           )
         );
       })
@@ -191,7 +191,7 @@ const [hasUpdated, setHasUpdated]= useState(false);
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-[#FFD700]/60 font-mono">{index + 1}</span>
-                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name} {player.slideNumber}</h4>
+                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name} {player.slideNumber} Corrects: {player.score}</h4>
 
                   </div>
                 </motion.div>
