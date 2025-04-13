@@ -44,7 +44,7 @@ const optionVariants = {
 };
 
 export default function PlaySet() {
-  const [timer, setTimer] = useState(60) // the varible that stores current time of timer in seconds
+  const [timer, setTimer] = useState(10) // the varible that stores current time of timer in seconds
   // useEffect(() => {
   //   const interval = setInterval(() => {
   //     setTimer(timer - 1);
@@ -57,7 +57,7 @@ export default function PlaySet() {
     setTimeout(() => {
        setTimer(timer -1);
        if(timer == 1){
-        router.push("/./leaderboard")
+        router.push("/./leaderboard/" + code)
       }
     }, 1000);  }, [timer])
 

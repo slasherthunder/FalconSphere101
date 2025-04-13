@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { db } from "../../../../../components/firebase";
+import { db } from "@/components/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 
@@ -16,13 +16,13 @@ const containerVariants = {
   },
 };
 
-useEffect(() => {
-  setTimeout(() => {
-     setTimer(timer -1);
-     if(timer == 1){
-      router.push("/./wait-for-next-question")
-    }
-  }, 1000);  }, [timer])
+// useEffect(() => {
+//   setTimeout(() => {
+//      setTimer(timer -1);
+//      if(timer == 1){
+//       router.push("/./wait-for-next-question")
+//     }
+//   }, 1000);  }, [timer])
 
 const LeaderboardPage = () => {
   const { code } = useParams();
@@ -39,6 +39,8 @@ const LeaderboardPage = () => {
           const gameData = docSnap.data();
           const sortedPlayers = [...gameData.player].sort((a, b) => b.score - a.score);
           setPlayers(sortedPlayers);
+          setPlayers([{name: "Jack"}]);
+
         } else {
           console.log("No such game document!");
         }
@@ -46,6 +48,8 @@ const LeaderboardPage = () => {
         console.error("Error fetching leaderboard data:", error);
       } finally {
         setLoading(false);
+        setPlayers([{name: "jervis", score: 10}, {name: "Aaron", score: 4},{name: "Jack", score: 11}, {name: "Popsicle", score: 62},{name: "Crystal", score: 12}, {name: "KEshav", score: -1}])
+        console.log(players)
       }
     };
 
