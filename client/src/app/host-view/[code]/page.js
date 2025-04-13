@@ -2,9 +2,9 @@
 import { useState, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../../components/firebase";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { FaCrown, FaPlay, FaStop } from "react-icons/fa";
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { collection, getDocs, doc, setDoc, addDoc , getDoc, onSnapshot} from "firebase/firestore";
 
 import { io } from "socket.io-client";
 
@@ -20,8 +20,14 @@ export default function HostView({ params }) {
   const [PlayerData, setPlayerData] = useState([]);
 
   //Retrieves Player Data from local storage
-  useEffect(() =>{
-    setPlayerData(JSON.parse(localStorage.getItem("PlayerData")));
+  useEffect( () =>{
+    const myFunc = async () => {
+      const docRef = doc(db, "game", code)
+      const newDoc = await getDoc(docRef);
+      const players = newDoc.data().players
+      setPlayerData(players)
+    }
+myFunc()
   }, []);
 
   useEffect(() =>{

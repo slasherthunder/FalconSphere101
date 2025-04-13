@@ -1,4 +1,7 @@
 "use client";
+import { db } from '@/components/firebase';
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, getDoc } from "firebase/firestore";
+import { ref, set, push } from "firebase/database";
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -81,7 +84,7 @@ export default function JoinGame() {
   };
 
   // Join the game session
-  const joinGame = () => {
+  const joinGame = async () => {
     // Validate inputs
     if (!sessionCode.trim()) {
       setError('Please enter a session code.');
@@ -97,16 +100,17 @@ export default function JoinGame() {
       setError('Your name contains inappropriate content. Please choose another name.');
       return;
     }
-
-    // Validate session code
-
-    if (sessionCode !== localStorage.getItem("Session Code")) {
-      setError("No sessions exist with that code");
+    if ( await checkIfSessionExists() == "cat"){
+      console.log("Tacocat")
+    }else{
+      setError("No sessions exist with that code")
       return;
     }
 
+
+
     // All validations passed, proceed with joining
-    router.push(`/dynamic-page/new-test/` + localStorage.getItem("PossibleSession"));
+    router.push(`/dynamic-page/new-test/` + sessionCode);
     sessionStorage.setItem("name", playerName)
     const JoinData = {
       name: playerName,
@@ -118,7 +122,65 @@ export default function JoinGame() {
     socket.emit("Add Player", totalPlayerData);
   
     // setSavedValues(playerName);
+
+    updatePlayers(sessionCode, [{name: playerName, score: 0}]);
+
+
+
+
   };
+
+
+
+
+const checkIfSessionExists = async () => {
+  const docExists = await checkIfDocExists("game", sessionCode);
+  if (docExists) {
+    return "cat";
+  } else {
+    return "Dagw";
+  }
+};
+
+const checkIfDocExists = async (collectionName, docId) => {
+  try {
+    const docRef = doc(db, collectionName, docId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      console.log("Document exists:", docSnap.data());
+      return true;
+    } else {
+      console.log("No such document!");
+      return false;
+    }
+  } catch (error) {
+    console.error("Error checking document existence:", error);
+    return false;
+  }
+};
+
+
+//Stores Plauer name in firebase for game
+const updatePlayers = async (code, newPlayers) => {
+  try {
+    const docRef = doc(db, "game", code);
+    await updateDoc(docRef, {
+      players: newPlayers
+    });
+    console.log("Players updated!");
+    const newDoc = await getDoc(docRef)
+    console.log(newDoc.data().code)
+    console.log(newDoc.data().players)
+
+  } catch (e) {
+    console.error("Error updating players: ", e);
+  }
+};
+
+
+
+
   useEffect(() => {
     socket.on("SendPlayerData", (data) => {
       const perfection = JSON.stringify(data);

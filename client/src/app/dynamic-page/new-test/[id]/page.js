@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/components/firebase";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc , getDoc} from "firebase/firestore";
 import { FaCopy, FaRedo, FaPlay, FaTrash, FaEdit, FaCrown } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
 import { useParams } from "next/navigation";
@@ -13,10 +13,36 @@ const socket = io("http://localhost:5000");
 export default function NewGame() {
 
   const { id } = useParams(); // Get unique ID from URL
+  const [once, setOnce] = useState(true)
   useEffect (() => {
     localStorage.setItem("PossibleSession", id);
+    if (once){
+      setOnce(false)
+      addCodeToFireBase()
+    }
 
   },[]);
+
+
+  const addCodeToFireBase = async () => {
+    const gameDoc = doc(db, "game", id)
+    const newDoc = await getDoc(gameDoc)
+    if (newDoc.exists()){
+      console.log("Hello")
+      return
+    }else{
+      try {
+        await setDoc(doc(db, "game", id), {
+          code: id,
+          players: []
+        });
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
+    }
+
+  };
+
 
   const router = useRouter();
   const [sessionCode, setSessionCode] = useState("");

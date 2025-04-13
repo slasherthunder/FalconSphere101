@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../components/firebase";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc } from "firebase/firestore";
 import { FaCopy, FaRedo, FaPlay, FaTrash, FaEdit, FaCrown } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
 
@@ -32,12 +32,15 @@ export default function NewGame() {
     fetchSets();
   }, []);
 
+
+
+
+
   // Generate a random session code and save it to Firestore
   const generateRandomCode = () => {
     const code = Math.floor(10000000 + Math.random() * 90000000).toString();
     setSessionCode(code);
     localStorage.setItem("Session Code", code);
-
     const sessionRef = doc(db, "sessions", code);
     setDoc(sessionRef, { code, players: [], selectedSet: null }, { merge: true })
       .then(() => console.log("Session created in Firestore"))
