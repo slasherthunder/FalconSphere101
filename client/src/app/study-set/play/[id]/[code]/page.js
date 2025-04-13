@@ -84,7 +84,7 @@ export default function PlaySet() {
     const getPlayerSlideIndexData = async () => {
       const docRef = doc(db, "game", code)
       const playerDocData = await getDoc(docRef);
-      const playerData =  playerDocData.data().player[0]
+      const playerData =  playerDocData.data().player[0 ]
       const playerSlide =  playerData.currentSlide
       setCurrentSlideIndex(playerSlide)
     } 

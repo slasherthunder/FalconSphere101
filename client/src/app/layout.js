@@ -42,7 +42,7 @@ export default function RootLayout({ children }) {
                 { href: "/new-game", label: "New Game", icon: FaGamepad },
                 { href: "/join-game", label: "Join Game", icon: FaSignInAlt },
                 { href: "/about-us", label: "About Us", icon: FaInfoCircle },
-                { href: "/home-page", label: "Test Me", icon: FaInfoCircle },
+                { href: "/leaderboard", label: "Leaderboard", icon: FaInfoCircle },
 
               ].map(({ href, label, icon: Icon }) => (
                 <Link
