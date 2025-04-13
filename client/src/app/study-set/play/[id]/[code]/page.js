@@ -57,7 +57,7 @@ export default function PlaySet() {
     setTimeout(() => {
        setTimer(timer -1);
        if(timer == 1){
-        router.push("/./wait-for-next-question")
+        router.push("/./leaderboard")
       }
     }, 1000);  }, [timer])
 
