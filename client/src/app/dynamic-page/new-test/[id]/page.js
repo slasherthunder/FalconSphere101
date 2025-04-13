@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/components/firebase";
-import { collection, getDocs, doc, setDoc, addDoc , getDoc} from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc , getDoc, updateDoc} from "firebase/firestore";
 import { FaCopy, FaRedo, FaPlay, FaTrash, FaEdit, FaCrown } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
 import { useParams } from "next/navigation";
@@ -43,6 +43,18 @@ export default function NewGame() {
 
   };
 
+  //Saves the slide data as part of the game database in firebase
+  const updateSlideID = async (code, slide) => {
+    try {
+      const docRef = doc(db, "game", code);
+      await updateDoc(docRef, {
+        slideID: slide
+  
+      });
+    } catch (e) {
+      console.error("Error updating slideID: ", e);
+    }
+  };
 
   const router = useRouter();
   const [sessionCode, setSessionCode] = useState("");
@@ -125,6 +137,7 @@ useEffect(() => {
       setSelectedSet(selected);
       const sessionRef = doc(db, "sessions", sessionCode);
       await setDoc(sessionRef, { selectedSet: selected }, { merge: true });
+      updateSlideID(id, selected)
     }
   };
 
@@ -188,7 +201,7 @@ useEffect(() => {
 useEffect(() => {
   socket.on("ChangeGameScreen", (urlID) => {
     if (window.location.pathname == "/dynamic-page/new-test/" + localStorage.getItem("PossibleSession")){
-      router.push("/study-set/play/" + urlID);
+      router.push("/study-set/play/" + urlID + "/" + id);
     }
   })
 }, [socket])

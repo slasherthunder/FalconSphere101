@@ -1,6 +1,6 @@
 "use client";
 import { db } from '@/components/firebase';
-import { collection, getDocs, doc, setDoc, addDoc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
 import { ref, set, push } from "firebase/database";
 
 import { useState, useEffect } from 'react';
@@ -123,7 +123,7 @@ export default function JoinGame() {
   
     // setSavedValues(playerName);
 
-    updatePlayers(sessionCode, [{name: playerName, score: 0}]);
+    updatePlayers(sessionCode, {name: playerName, score: 0, currentSlide: 0,});
 
 
 
@@ -166,7 +166,8 @@ const updatePlayers = async (code, newPlayers) => {
   try {
     const docRef = doc(db, "game", code);
     await updateDoc(docRef, {
-      players: newPlayers
+      players: arrayUnion(newPlayers)
+
     });
     console.log("Players updated!");
     const newDoc = await getDoc(docRef)

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation"; // Import useRouter
-import { db } from "../../../../components/firebase"; // Import Firestore instance
+import { db } from "../../../../../components/firebase"; // Import Firestore instance
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion, AnimatePresence } from "framer-motion"; // Import framer-motion
 
@@ -62,7 +62,9 @@ export default function PlaySet() {
     }, 1000);  }, [timer])
 
 
-  const { id } = useParams(); // Get the set ID from the URL
+  const params = useParams(); // Get the set ID from the URL
+  const id = params.id
+  const code = params.code
   const router = useRouter(); // Initialize the router
   const [setData, setSetData] = useState(null); // State to store the set data
   const [loading, setLoading] = useState(true); // State to handle loading
@@ -72,16 +74,26 @@ export default function PlaySet() {
   const [showResult, setShowResult] = useState(false); // Show result after quiz ends
 
   useEffect (() => {
-    const listOfObject = localStorage.getItem("PlayerData")
-    const listOfObjects = JSON.parse(listOfObject);
-    sessionStorage.setItem("currentGameSetID", id)
-    const name = sessionStorage.getItem("name")
+    // const listOfObject = localStorage.getItem("PlayerData")
+    // const listOfObjects = JSON.parse(listOfObject);
+    // sessionStorage.setItem("currentGameSetID", id)
+    // const name = sessionStorage.getItem("name")
 
-    const index = listOfObjects.findIndex(obj => obj.name === name);
-    const slideNum = listOfObjects[index].slideNumber
-    setCurrentSlideIndex(slideNum)
+    // const index = listOfObjects.findIndex(obj => obj.name === name);
+    // const slideNum = listOfObjects[index].slideNumber
+    const getPlayerSlideIndexData = async () => {
+      const docRef = doc(db, "game", code)
+      const playerDocData = await getDoc(docRef);
+      const playerData =  playerDocData.data().player[0]
+      const playerSlide =  playerData.currentSlide
+      setCurrentSlideIndex(playerSlide)
+    } 
+    getPlayerSlideIndexData()
+
+    // setCurrentSlideIndex(slideNum)
 
   }, []);
+
 
   // Fetch the set data from Firestore
   useEffect(() => {
