@@ -1,13 +1,15 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { db } from "../../components/firebase"; // Import Firestore instance
-import { collection, addDoc } from "firebase/firestore"; // Import Firestore functions
-import { Filter } from "bad-words"; // Import the profanity filter
+import { db } from "../../components/firebase";
+import { collection, addDoc } from "firebase/firestore";
+import { Filter } from "bad-words";
 import { motion } from "framer-motion";
-// Initialize the profanity filter
+import { saveAs } from 'file-saver';
+import { parse } from 'papaparse';
+
 const filter = new Filter();
 
-// Add animation variants at the top
+// Animation variants
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -63,106 +65,277 @@ export default function CreateSet() {
       question: "",
       options: ["", "", "", ""],
       correctAnswer: "",
-      image: null,
+      imageData: null,
     },
   ]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [error, setError] = useState("");
   const [duplicateOptions, setDuplicateOptions] = useState([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Add useEffect to check for copied set data
-  useEffect(() => {
-    const copiedSet = localStorage.getItem('copiedSet');
-    if (copiedSet) {
-      try {
-        const setData = JSON.parse(copiedSet);
-        setTitle(setData.title);
-        setSlides(setData.slides);
-        // Clear the copied set from localStorage
-        localStorage.removeItem('copiedSet');
-      } catch (error) {
-        console.error('Error parsing copied set:', error);
-        setError('Error loading copied set data');
-      }
+  // Convert set to CSV format with proper image handling
+  const convertToCSV = () => {
+    if (!title) {
+      setError("Please add a title before exporting");
+      return null;
     }
-  }, []);
 
-  // Validate for profanity
-  const validateProfanity = (text) => {
-    return filter.isProfane(text);
+    let csv = "Question,Option1,Option2,Option3,Option4,CorrectAnswer,ImageData\n";
+    
+    slides.forEach(slide => {
+      // Extract just the base64 data without the data URL prefix for cleaner CSV
+      const imageData = slide.imageData ? 
+        slide.imageData.split(',')[1] || slide.imageData : 
+        '';
+      
+      const row = [
+        `"${(slide.question || '').replace(/"/g, '""')}"`,
+        ...slide.options.map(opt => `"${(opt || '').replace(/"/g, '""')}"`),
+        `"${(slide.correctAnswer || '').replace(/"/g, '""')}"`,
+        imageData ? `"${imageData}"` : '""'
+      ].join(",");
+      
+      csv += row + "\n";
+    });
+
+    return csv;
+  };
+
+  // Export set as CSV file
+  const exportToCSV = () => {
+    setIsExporting(true);
+    try {
+      const csv = convertToCSV();
+      if (!csv) return;
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `${title.replace(/\s+/g, '_')}_quiz.csv`);
+      setSuccessMessage("Set exported as CSV successfully!");
+    } catch (error) {
+      setError("Failed to export CSV: " + error.message);
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
+  };
+
+  // Import set from CSV file with proper image handling
+  const importFromCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setError("");
+    setSuccessMessage("");
+
+    parse(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (results) => {
+        try {
+          if (results.data.length < 2) {
+            setError("CSV file must contain at least one question row");
+            return;
+          }
+
+          const firstRow = results.data[0];
+          let startIndex = 0;
+          if (firstRow.some(cell => typeof cell === 'string' && 
+              (cell.toLowerCase().includes("question") || 
+               cell.toLowerCase().includes("answer")))) {
+            startIndex = 1;
+          }
+
+          const importedSlides = [];
+          for (let i = startIndex; i < results.data.length; i++) {
+            const row = results.data[i];
+            if (!row[0]) continue;
+
+            const options = [];
+            for (let j = 1; j <= 4; j++) {
+              options.push(row[j] || "");
+            }
+
+            const correctAnswer = row[5] || "";
+            let imageData = null;
+
+            // Handle image data from CSV
+            if (row[6] && row[6].trim() !== "") {
+              // Check if it already has the data URL prefix
+              if (row[6].startsWith('data:')) {
+                imageData = row[6];
+              } else {
+                // Assume it's base64 and add the proper prefix
+                imageData = `data:image/jpeg;base64,${row[6]}`;
+              }
+            }
+
+            importedSlides.push({
+              question: row[0],
+              options: options,
+              correctAnswer: correctAnswer,
+              imageData: imageData
+            });
+          }
+
+          if (importedSlides.length === 0) {
+            setError("No valid questions found in CSV");
+            return;
+          }
+
+          setTitle(file.name.replace('.csv', '').replace(/_/g, ' '));
+          setSlides(importedSlides);
+          setCurrentSlideIndex(0);
+          setSuccessMessage(`Successfully imported ${importedSlides.length} questions!`);
+        } catch (error) {
+          setError("Error processing CSV: " + error.message);
+        } finally {
+          setTimeout(() => setSuccessMessage(""), 5000);
+        }
+      },
+      error: (error) => {
+        setError(`Error parsing CSV: ${error.message}`);
+      }
+    });
+  };
+
+  // Handle image upload with proper Base64 conversion
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match('image.*')) {
+      setError("Please select an image file (JPEG, PNG, etc.)");
+      return;
+    }
+
+    // Validate file size
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image must be smaller than 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const newSlides = [...slides];
+      // Store the complete data URL
+      newSlides[currentSlideIndex].imageData = event.target.result;
+      setSlides(newSlides);
+      setError("");
+    };
+    reader.onerror = () => {
+      setError("Failed to read image file");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle removing image
+  const handleRemoveImage = () => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].imageData = null;
+    setSlides(newSlides);
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = "";
   };
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check for profanity in the title
-    if (validateProfanity(title)) {
-      setError("Title contains inappropriate language. Please revise.");
+    // Validate title
+    if (!title.trim()) {
+      setError("Please enter a title for your set");
       return;
     }
 
-    // Check for profanity in the slides
+    // Check for profanity
+    if (validateProfanity(title)) {
+      setError("Title contains inappropriate language");
+      return;
+    }
+
+    // Validate slides
     for (const slide of slides) {
-      if (validateProfanity(slide.question)) {
-        setError(`Question in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+      if (!slide.question.trim()) {
+        setError(`Please enter a question for slide ${slides.indexOf(slide) + 1}`);
         return;
       }
+
+      if (validateProfanity(slide.question)) {
+        setError(`Question in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
+        return;
+      }
+
+      const validOptions = slide.options.filter(opt => opt.trim() !== "");
+      if (validOptions.length < 2) {
+        setError(`Slide ${slides.indexOf(slide) + 1} needs at least 2 options`);
+        return;
+      }
+
+      if (!slide.correctAnswer.trim()) {
+        setError(`Please select a correct answer for slide ${slides.indexOf(slide) + 1}`);
+        return;
+      }
+
       for (const option of slide.options) {
         if (validateProfanity(option)) {
-          setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+          setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
           return;
         }
       }
+
+      const hasDuplicates = new Set(
+        slide.options.filter(opt => opt.trim() !== "")
+      ).size !== slide.options.filter(opt => opt.trim() !== "").length;
+
+      if (hasDuplicates) {
+        setError(`Options must be unique in slide ${slides.indexOf(slide) + 1}`);
+        return;
+      }
     }
 
-    // Check for duplicate options
-    const hasDuplicates = slides.some((slide) => {
-      const optionSet = new Set(slide.options.filter((option) => option.trim() !== ""));
-      return optionSet.size !== slide.options.filter((option) => option.trim() !== "").length;
-    });
-
-    if (hasDuplicates) {
-      setError("Options must be unique. Please remove duplicate options.");
-      return;
-    }
-
-    // Proceed with saving if no profanity or duplicates are found
+    // Prepare set data
     const setData = {
       title,
-      slides,
+      slides: slides.map(slide => ({
+        question: slide.question,
+        options: slide.options,
+        correctAnswer: slide.correctAnswer,
+        imageData: slide.imageData || null
+      })),
       createdAt: new Date().toISOString(),
     };
 
     try {
       const docRef = await addDoc(collection(db, "sets"), setData);
-      console.log("Set saved with ID: ", docRef.id);
-
-      // Store the set in local storage
+      
+      // Store in local storage
       const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
       const newUserSets = [{ id: docRef.id, ...setData }, ...storedUserSets].slice(0, 5);
       localStorage.setItem("userSets", JSON.stringify(newUserSets));
 
+      // Reset form
       setTitle("");
-      setSlides([
-        {
-          question: "",
-          options: ["", "", "", ""],
-          correctAnswer: "",
-          image: null,
-        },
-      ]);
+      setSlides([{
+        question: "",
+        options: ["", "", "", ""],
+        correctAnswer: "",
+        imageData: null,
+      }]);
       setCurrentSlideIndex(0);
       setDuplicateOptions([]);
       setError("");
-      alert("Set created successfully!");
+      setSuccessMessage("Set created successfully!");
     } catch (error) {
       console.error("Error saving set: ", error);
       setError("Failed to save the set. Please try again.");
+    } finally {
+      setTimeout(() => setSuccessMessage(""), 3000);
     }
   };
 
-  // Handle adding a new slide
+  // Other handlers
   const handleAddSlide = () => {
     setSlides([
       ...slides,
@@ -170,31 +343,28 @@ export default function CreateSet() {
         question: "",
         options: ["", "", "", ""],
         correctAnswer: "",
-        image: null,
+        imageData: null,
       },
     ]);
     setCurrentSlideIndex(slides.length);
   };
 
-  // Handle deleting a slide
   const handleDeleteSlide = (index) => {
     if (slides.length > 1) {
       const newSlides = slides.filter((_, i) => i !== index);
       setSlides(newSlides);
       setCurrentSlideIndex(Math.min(currentSlideIndex, newSlides.length - 1));
     } else {
-      setError("A set must have at least one slide.");
+      setError("A set must have at least one slide");
     }
   };
 
-  // Handle changing the question for the current slide
   const handleQuestionChange = (value) => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].question = value;
     setSlides(newSlides);
   };
 
-  // Handle changing an option for the current slide
   const handleOptionChange = (index, value) => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].options[index] = value;
@@ -202,7 +372,6 @@ export default function CreateSet() {
     checkForDuplicates(newSlides[currentSlideIndex].options);
   };
 
-  // Handle removing an option for the current slide
   const handleRemoveOption = (index) => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].options.splice(index, 1);
@@ -210,46 +379,18 @@ export default function CreateSet() {
     checkForDuplicates(newSlides[currentSlideIndex].options);
   };
 
-  // Handle changing the correct answer for the current slide
   const handleCorrectAnswerChange = (value) => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].correctAnswer = value;
     setSlides(newSlides);
   };
 
-  // Handle adding an image to the current slide
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newSlides = [...slides];
-        newSlides[currentSlideIndex].image = reader.result;
-        setSlides(newSlides);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Handle removing the image from the current slide
-  const handleRemoveImage = () => {
-    const newSlides = [...slides];
-    newSlides[currentSlideIndex].image = null;
-    setSlides(newSlides);
-    const fileInput = document.querySelector('input[type=file]');
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
-
-  // Handle adding a new option to the current slide
   const handleAddOption = () => {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].options.push("");
     setSlides(newSlides);
   };
 
-  // Check for duplicate options in the current slide
   const checkForDuplicates = (options) => {
     const optionCounts = {};
     const duplicates = [];
@@ -270,13 +411,25 @@ export default function CreateSet() {
       .flat();
 
     setDuplicateOptions(allDuplicates);
-
-    if (allDuplicates.length > 0) {
-      setError("Options must be unique. Please remove duplicate options.");
-    } else {
-      setError("");
-    }
   };
+
+  const validateProfanity = (text) => {
+    return filter.isProfane(text);
+  };
+
+  useEffect(() => {
+    const copiedSet = localStorage.getItem('copiedSet');
+    if (copiedSet) {
+      try {
+        const setData = JSON.parse(copiedSet);
+        setTitle(setData.title);
+        setSlides(setData.slides);
+        localStorage.removeItem('copiedSet');
+      } catch (error) {
+        setError('Error loading copied set data');
+      }
+    }
+  }, []);
 
   const currentSlide = slides[currentSlideIndex];
 
@@ -302,6 +455,32 @@ export default function CreateSet() {
             >
               Create New Set
             </motion.h2>
+            <div className="flex gap-4 mt-4 sm:mt-0">
+              <motion.button
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                onClick={exportToCSV}
+                disabled={isExporting}
+                className="px-6 py-3 bg-[#FFD700] text-[#8B0000] font-bold rounded-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300 disabled:opacity-50"
+              >
+                {isExporting ? "Exporting..." : "Export CSV"}
+              </motion.button>
+              <motion.label
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                className="px-6 py-3 bg-[#FFD700] text-[#8B0000] font-bold rounded-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300 cursor-pointer"
+              >
+                Import CSV
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={importFromCSV} 
+                  className="hidden" 
+                />
+              </motion.label>
+            </div>
           </div>
 
           {error && (
@@ -311,6 +490,16 @@ export default function CreateSet() {
               className="bg-red-600/90 backdrop-blur-sm text-white p-4 rounded-lg mb-6 shadow-lg"
             >
               {error}
+            </motion.div>
+          )}
+
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-green-600/90 backdrop-blur-sm text-white p-4 rounded-lg mb-6 shadow-lg"
+            >
+              {successMessage}
             </motion.div>
           )}
 
@@ -341,16 +530,21 @@ export default function CreateSet() {
                 >
                   {currentSlide.question || "Question:"}
                 </motion.div>
-                {currentSlide.image && (
+                {currentSlide.imageData && (
                   <motion.div
                     className="relative overflow-hidden rounded-xl"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                   >
                     <img
-                      src={currentSlide.image}
+                      src={currentSlide.imageData}
                       alt="Question"
-                      className="w-full h-full object-cover rounded-xl shadow-lg"
+                      className="w-full h-auto max-h-64 object-contain rounded-xl shadow-lg bg-black bg-opacity-50 p-2"
+                      onError={(e) => {
+                        e.target.onerror = null; 
+                        e.target.src = "/image-placeholder.png";
+                        e.target.className = "w-full h-auto max-h-64 object-contain rounded-xl shadow-lg bg-black bg-opacity-50 p-2 border border-red-500";
+                      }}
                     />
                     <motion.button
                       variants={buttonVariants}
@@ -411,6 +605,7 @@ export default function CreateSet() {
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
                     placeholder="Enter title"
+                    required
                   />
                 </div>
 
@@ -469,6 +664,7 @@ export default function CreateSet() {
                     onChange={(e) => handleQuestionChange(e.target.value)}
                     className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
                     placeholder="Enter your question"
+                    required
                   />
                 </div>
 
@@ -478,9 +674,15 @@ export default function CreateSet() {
                   <motion.input
                     whileFocus={{ scale: 1.02 }}
                     type="file"
+                    accept="image/*"
                     onChange={handleImageChange}
                     className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#FFD700] file:text-[#8B0000] hover:file:bg-[#FFC300]"
                   />
+                  {currentSlide.imageData && (
+                    <div className="mt-4 text-sm text-[#FFD700]">
+                      Image attached (see preview)
+                    </div>
+                  )}
                 </div>
 
                 {/* Options */}
@@ -497,7 +699,8 @@ export default function CreateSet() {
                           className={`flex-1 p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 ${
                             duplicateOptions.includes(index) ? "border-red-500" : "border-[#FFD700]"
                           }`}
-                          placeholder={`Enter a possible answer`}
+                          placeholder={`Option ${index + 1}`}
+                          required
                         />
                         <motion.button
                           variants={buttonVariants}
@@ -532,6 +735,7 @@ export default function CreateSet() {
                     value={currentSlide.correctAnswer}
                     onChange={(e) => handleCorrectAnswerChange(e.target.value)}
                     className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    required
                   >
                     <option value="">Select correct answer</option>
                     {currentSlide.options.map((option, index) => (
