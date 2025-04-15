@@ -16,18 +16,11 @@ const containerVariants = {
   },
 };
 
-// useEffect(() => {
-//   setTimeout(() => {
-//      setTimer(timer -1);
-//      if(timer == 1){
-//       router.push("/./wait-for-next-question")
-//     }
-//   }, 1000);  }, [timer])
-
 const LeaderboardPage = () => {
   const { code } = useParams();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [gameData, setGameData] = useState(null);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -36,11 +29,10 @@ const LeaderboardPage = () => {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const gameData = docSnap.data();
-          const sortedPlayers = [...gameData.player].sort((a, b) => b.score - a.score);
+          const data = docSnap.data();
+          setGameData(data);
+          const sortedPlayers = [...data.player].sort((a, b) => b.score - a.score);
           setPlayers(sortedPlayers);
-          setPlayers([{name: "Jack"}]);
-
         } else {
           console.log("No such game document!");
         }
@@ -48,13 +40,54 @@ const LeaderboardPage = () => {
         console.error("Error fetching leaderboard data:", error);
       } finally {
         setLoading(false);
-        setPlayers([{name: "jervis", score: 10}, {name: "Aaron", score: 4},{name: "Jack", score: 11}, {name: "Popsicle", score: 62},{name: "Crystal", score: 12}, {name: "KEshav", score: -1}])
-        console.log(players)
       }
     };
 
     fetchLeaderboard();
   }, [code]);
+
+  const exportToCSV = () => {
+    if (!gameData) return;
+
+    // Prepare CSV content
+    let csvContent = "data:text/csv;charset=utf-8,";
+
+    // Add metadata
+    csvContent += `Game Code,${code}\n`;
+    csvContent += `Game Start Time,${gameData.startTime}\n`;
+    csvContent += `Total Questions,${gameData.questions?.length || 0}\n`;
+    csvContent += `Total Players,${players.length}\n\n`;
+
+    // Add leaderboard
+    csvContent += "Rank,Player Name,Score\n";
+    players.forEach((player, index) => {
+      csvContent += `${index + 1},${player.name},${player.score}\n`;
+    });
+
+    // Add question analytics if available
+    if (gameData.questions) {
+      csvContent += "\nQuestion Analytics\n";
+      csvContent += "Question Number,Question Text,Correct Answer,Average Score\n";
+      
+      gameData.questions.forEach((question, index) => {
+        const totalScore = players.reduce((sum, player) => {
+          return sum + (player.questionScores?.[index] || 0);
+        }, 0);
+        const averageScore = players.length > 0 ? (totalScore / players.length).toFixed(2) : 0;
+        
+        csvContent += `${index + 1},"${question.question}","${question.correctAnswer}",${averageScore}\n`;
+      });
+    }
+
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `game_analytics_${code}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (loading) {
     return (
@@ -72,7 +105,16 @@ const LeaderboardPage = () => {
         animate="visible"
         className="max-w-3xl mx-auto bg-[#700000]/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-[#ffffff20]"
       >
-        <h1 className="text-4xl font-bold text-center text-[#FFD700] mb-6">Leaderboard</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-4xl font-bold text-[#FFD700]">Leaderboard</h1>
+          <button
+            onClick={exportToCSV}
+            className="bg-[#FFD700] hover:bg-[#FFC000] text-[#8B0000] font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+          >
+            Export Analytics
+          </button>
+        </div>
+        
         <div className="space-y-4">
           {players.map((player, index) => (
             <motion.div

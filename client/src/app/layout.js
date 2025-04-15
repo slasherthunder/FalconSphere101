@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
-import { FaHome, FaPlus, FaGamepad, FaSignInAlt, FaInfoCircle } from "react-icons/fa"; // Import icons
+import { FaHome, FaPlus, FaGamepad, FaSignInAlt, FaLightbulb } from "react-icons/fa"; // Import icons
 import "./globals.css"; // Keep it if you're handling fonts and general styles
 
 const geistSans = Geist({
@@ -41,8 +41,7 @@ export default function RootLayout({ children }) {
                 { href: "/create-set", label: "Create Sets", icon: FaPlus },
                 { href: "/new-game", label: "New Game", icon: FaGamepad },
                 { href: "/join-game", label: "Join Game", icon: FaSignInAlt },
-                { href: "/about-us", label: "About Us", icon: FaInfoCircle },
-                { href: "/leaderboard", label: "Leaderboard", icon: FaInfoCircle },
+                { href: "/feedview", label: "Peer Help", icon: FaLightbulb },
 
               ].map(({ href, label, icon: Icon }) => (
                 <Link
