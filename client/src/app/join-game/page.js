@@ -122,8 +122,8 @@ export default function JoinGame() {
     socket.emit("Add Player", totalPlayerData);
   
     // setSavedValues(playerName);
-
-    updatePlayers(sessionCode, {name: playerName, score: 0, currentSlide: 0,});
+    //Creates player Data Object
+    updatePlayers(sessionCode, {name: playerName, score: 0, currentSlide: 0, correctAnswers: 0, percentage: 0});
 
 
 

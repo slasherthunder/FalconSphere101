@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation"; // Import useRouter
 import { db } from "../../../../../components/firebase"; // Import Firestore instance
-import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+import { doc, getDoc, updateDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion, AnimatePresence } from "framer-motion"; // Import framer-motion
 
 import { io } from "socket.io-client";
@@ -44,7 +44,7 @@ const optionVariants = {
 };
 
 export default function PlaySet() {
-  const [timer, setTimer] = useState(10) // the varible that stores current time of timer in seconds
+  const [timer, setTimer] = useState(60) // the varible that stores current time of timer in seconds
   // useEffect(() => {
   //   const interval = setInterval(() => {
   //     setTimer(timer - 1);
@@ -84,7 +84,7 @@ export default function PlaySet() {
     const getPlayerSlideIndexData = async () => {
       const docRef = doc(db, "game", code)
       const playerDocData = await getDoc(docRef);
-      const playerData =  playerDocData.data().player[0 ]
+      const playerData =  playerDocData.data().player[0]
       const playerSlide =  playerData.currentSlide
       setCurrentSlideIndex(playerSlide)
     } 
@@ -130,11 +130,45 @@ export default function PlaySet() {
       
     }
 
+
+    //Increases current slide number in FireBase
+    const updatePlayerSlide = async () => {
+      try {
+        const docRef = doc(db, "game", code);
+        const docSnap = await getDoc(docRef);
+    
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const updatedPlayers = data.players.map(player => {
+            if (player.name === sessionStorage.getItem("name")) {
+              if (selectedAnswer === setData.slides[currentSlideIndex].correctAnswer){
+                return { ...player, currentSlide: currentSlideIndex + 1 , correctAnswers: score + 1, percentage: ((score + 1)/(currentSlideIndex + 1)).toFixed(2)}; // update the field
+              }
+              return { ...player, currentSlide: currentSlideIndex + 1, percentage: ((score + 1)/(currentSlideIndex + 1)).toFixed(2) }; // update the field
+            }
+            return player;
+          });
+    
+          await updateDoc(docRef, {
+            players: updatedPlayers
+          });
+    
+          console.log("Player updated successfully!");
+        } else {
+          console.log("Document not found!");
+        }
+      } catch (e) {
+        console.error("Error updating player:", e);
+      }
+    };
+    updatePlayerSlide()
+    
+
     // Move to the next question
     if (currentSlideIndex < setData.slides.length - 1) {
       //sends data to server on what current question a user is on
       socket.emit("Next Slide", {slide: currentSlideIndex + 1, name: sessionStorage.getItem("name"), score: score});
-      router.push("/./wait-for-next-question")
+      // router.push("/./wait-for-next-question")
 
 
       setCurrentSlideIndex(currentSlideIndex + 1);
