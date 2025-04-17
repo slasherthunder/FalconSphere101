@@ -1,15 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db } from "../../../components/firebase"; // Import Firestore instance
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"; // Import Firestore functions
-import { Filter } from "bad-words"; // Import the profanity filter
+import { db } from "../../../components/firebase";
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { Filter } from "bad-words";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Initialize the profanity filter
 const filter = new Filter();
 
-// Add animation variants
+// Animation variants
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -41,7 +41,7 @@ const buttonVariants = {
 };
 
 export default function EditSet() {
-  const { id } = useParams(); // Get the set ID from the URL
+  const { id } = useParams();
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [slides, setSlides] = useState([
@@ -49,11 +49,12 @@ export default function EditSet() {
       question: "",
       options: ["", "", "", ""],
       correctAnswer: "",
-      image: null,
+      imageData: null,
     },
   ]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
   const currentSlide = slides[currentSlideIndex];
@@ -97,6 +98,7 @@ export default function EditSet() {
       await updateDoc(docRef, {
         title,
         slides,
+        updatedAt: new Date().toISOString(),
       });
 
       // Update the set in local storage
@@ -106,8 +108,8 @@ export default function EditSet() {
       );
       localStorage.setItem("userSets", JSON.stringify(updatedUserSets));
 
-      alert("Set updated successfully!");
-      router.push("/");
+      setSuccessMessage("Set updated successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error updating set: ", error);
       setError("Failed to update the set. Please try again.");
@@ -116,20 +118,21 @@ export default function EditSet() {
 
   // Handle deleting the set
   const handleDeleteSet = async () => {
-    try {
-      const docRef = doc(db, "sets", id);
-      await deleteDoc(docRef);
+    if (confirm("Are you sure you want to delete this set? This action cannot be undone.")) {
+      try {
+        const docRef = doc(db, "sets", id);
+        await deleteDoc(docRef);
 
-      // Remove the set from local storage
-      const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
-      const updatedUserSets = storedUserSets.filter((set) => set.id !== id);
-      localStorage.setItem("userSets", JSON.stringify(updatedUserSets));
+        // Remove the set from local storage
+        const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
+        const updatedUserSets = storedUserSets.filter((set) => set.id !== id);
+        localStorage.setItem("userSets", JSON.stringify(updatedUserSets));
 
-      alert("Set deleted successfully!");
-      router.push("/");
-    } catch (error) {
-      console.error("Error deleting set: ", error);
-      setError("Failed to delete the set. Please try again.");
+        router.push("/");
+      } catch (error) {
+        console.error("Error deleting set: ", error);
+        setError("Failed to delete the set. Please try again.");
+      }
     }
   };
 
@@ -148,8 +151,8 @@ export default function EditSet() {
   useEffect(() => {
     const fetchSetData = async () => {
       try {
-        const docRef = doc(db, "sets", id); // Reference to the specific set
-        const docSnap = await getDoc(docRef); // Fetch the document
+        const docRef = doc(db, "sets", id);
+        const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -159,7 +162,7 @@ export default function EditSet() {
               question: "",
               options: ["", "", "", ""],
               correctAnswer: "",
-              image: null,
+              imageData: null,
             },
           ]);
         } else {
@@ -169,14 +172,13 @@ export default function EditSet() {
         console.error("Error fetching set data: ", error);
         setError("Failed to fetch data, please try again.");
       } finally {
-        setLoading(false); // Set loading to false after fetching
+        setLoading(false);
       }
     };
 
     fetchSetData();
   }, [id]);
 
-  // Handle other functions like slide management ...
   const handleQuestionChange = (question) => {
     const updatedSlides = [...slides];
     updatedSlides[currentSlideIndex].question = question;
@@ -189,7 +191,7 @@ export default function EditSet() {
       const updatedSlides = [...slides];
       const reader = new FileReader();
       reader.onloadend = () => {
-        updatedSlides[currentSlideIndex].image = reader.result;
+        updatedSlides[currentSlideIndex].imageData = reader.result;
         setSlides(updatedSlides);
       };
       reader.readAsDataURL(file);
@@ -205,7 +207,7 @@ export default function EditSet() {
         question: "",
         options: ["", "", "", ""],
         correctAnswer: "",
-        image: null,
+        imageData: null,
       },
     ]);
     setCurrentSlideIndex(slides.length);
@@ -213,7 +215,7 @@ export default function EditSet() {
 
   const handleRemoveImage = () => {
     const updatedSlides = [...slides];
-    updatedSlides[currentSlideIndex].image = null;
+    updatedSlides[currentSlideIndex].imageData = null;
     setSlides(updatedSlides);
   };
 
@@ -281,7 +283,7 @@ export default function EditSet() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              Edit Set
+              Edit Set: {title}
             </motion.h2>
           </div>
 
@@ -289,9 +291,25 @@ export default function EditSet() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-600/90 backdrop-blur-sm text-white p-4 rounded-lg mb-6 shadow-lg"
+              className="bg-red-600/90 backdrop-blur-sm text-white p-4 rounded-lg mb-6 shadow-lg flex items-start gap-3"
             >
-              {error}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>{error}</div>
+            </motion.div>
+          )}
+
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-green-600/90 backdrop-blur-sm text-white p-4 rounded-lg mb-6 shadow-lg flex items-start gap-3"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>{successMessage}</div>
             </motion.div>
           )}
 
@@ -303,7 +321,15 @@ export default function EditSet() {
               animate="visible"
               className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
             >
-              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Preview</h2>
+              <div className="flex justify-between items-start mb-8">
+                <h2 className="text-3xl text-[#FFD700] font-bold">Preview</h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#FFD700] text-lg">
+                    Slide {currentSlideIndex + 1} of {slides.length}
+                  </span>
+                </div>
+              </div>
+
               <motion.div 
                 className="space-y-6"
                 initial={{ opacity: 0 }}
@@ -322,16 +348,16 @@ export default function EditSet() {
                 >
                   {currentSlide.question || "Question:"}
                 </motion.div>
-                {currentSlide.image && (
+                {currentSlide.imageData && (
                   <motion.div
                     className="relative overflow-hidden rounded-xl"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                   >
                     <img
-                      src={currentSlide.image}
+                      src={currentSlide.imageData}
                       alt="Question"
-                      className="w-full h-full object-cover rounded-xl shadow-lg"
+                      className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
                     />
                     <motion.button
                       variants={buttonVariants}
@@ -350,7 +376,11 @@ export default function EditSet() {
                       key={index}
                       whileHover={{ scale: 1.02, x: 5 }}
                       transition={{ duration: 0.2 }}
-                      className="flex items-center p-4 rounded-xl border-2 border-[#FFD700] bg-[#500000]/70 backdrop-blur-sm shadow-lg"
+                      className={`flex items-center p-4 rounded-xl border-2 ${
+                        option === currentSlide.correctAnswer
+                          ? "border-green-500 bg-green-900/50"
+                          : "border-[#FFD700] bg-[#500000]/70"
+                      } backdrop-blur-sm shadow-lg`}
                     >
                       <input
                         type="radio"

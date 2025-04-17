@@ -45,7 +45,7 @@ export default function StudySet() {
   const [selectedAnswer, setSelectedAnswer] = useState(""); // Track user's selected answer
   const [score, setScore] = useState(0); // Track user's score
   const [showResult, setShowResult] = useState(false); // Show result after quiz ends
-  const [imageBoxSize, setImageBoxSize] = useState({ width: 100, height: 12, unit: "%" }); // Default image box size
+  const [isPlaying, setIsPlaying] = useState(false); // Track if in play mode
 
   // Fetch the set data from Firestore
   useEffect(() => {
@@ -57,11 +57,6 @@ export default function StudySet() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setSetData(data);
-
-          // Load saved image box size if it exists
-          if (data.imageBoxSize) {
-            setImageBoxSize(data.imageBoxSize);
-          }
         } else {
           console.log("No such document!");
         }
@@ -101,6 +96,7 @@ export default function StudySet() {
     setSelectedAnswer("");
     setScore(0);
     setShowResult(false);
+    setIsPlaying(false);
   };
 
   // Download the set as a JSON file
@@ -119,9 +115,13 @@ export default function StudySet() {
     URL.revokeObjectURL(url); // Release the Blob URL
   };
 
-  // Navigate to the play set page
-  const navigateToPlaySet = () => {
-    router.push(`/study-set/play/${id}`);
+  // Start playing the set
+  const startPlaying = () => {
+    setIsPlaying(true);
+    setCurrentSlideIndex(0);
+    setSelectedAnswer("");
+    setScore(0);
+    setShowResult(false);
   };
 
   // Add new function to handle copying set
@@ -169,6 +169,114 @@ export default function StudySet() {
 
   const currentSlide = setData.slides[currentSlideIndex];
 
+  if (isPlaying) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-4xl"
+        >
+          {showResult ? (
+            <motion.div
+              className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-4xl text-[#FFD700] font-bold mb-6">Quiz Completed!</h2>
+              <p className="text-2xl text-[#FFD700] mb-8">
+                Your score: {score} out of {setData.slides.length}
+              </p>
+              <motion.button
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                onClick={restartQuiz}
+                className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+              >
+                Play Again
+              </motion.button>
+            </motion.div>
+          ) : (
+            <motion.div
+              className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20]"
+              variants={cardVariants}
+            >
+              <div className="mb-6 flex justify-between items-center">
+                <span className="text-[#FFD700] text-xl">
+                  Question {currentSlideIndex + 1} of {setData.slides.length}
+                </span>
+                <span className="text-[#FFD700] text-xl">Score: {score}</span>
+              </div>
+
+              <motion.h3
+                className="text-3xl text-[#FFD700] font-bold mb-6"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                {currentSlide.question}
+              </motion.h3>
+
+              {currentSlide.image && (
+                <motion.div
+                  className="relative overflow-hidden rounded-xl mb-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                  <img
+                    src={currentSlide.image}
+                    alt="Question"
+                    className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
+                  />
+                </motion.div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {currentSlide.options.map((option, index) => (
+                  <motion.button
+                    key={index}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleAnswerSelect(option)}
+                    className={`p-6 rounded-xl text-xl font-semibold transition-all duration-300 ${
+                      selectedAnswer === option
+                        ? option === currentSlide.correctAnswer
+                          ? "bg-green-600 text-white"
+                          : "bg-red-600 text-white"
+                        : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                    }`}
+                    disabled={selectedAnswer !== ""}
+                  >
+                    {option}
+                  </motion.button>
+                ))}
+              </div>
+
+              <motion.button
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                onClick={handleNextQuestion}
+                disabled={!selectedAnswer}
+                className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-all duration-300 ${
+                  selectedAnswer
+                    ? "bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300]"
+                    : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                }`}
+              >
+                {currentSlideIndex < setData.slides.length - 1 ? "Next Question" : "Finish Quiz"}
+              </motion.button>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4">
       <motion.div
@@ -205,7 +313,7 @@ export default function StudySet() {
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
-                onClick={navigateToPlaySet}
+                onClick={startPlaying}
                 className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
               >
                 Play Set
@@ -245,15 +353,11 @@ export default function StudySet() {
                     className="relative overflow-hidden rounded-xl"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
-                    style={{
-                      width: `${imageBoxSize.width}${imageBoxSize.unit}`,
-                      height: `${imageBoxSize.height}${imageBoxSize.unit}`,
-                    }}
                   >
                     <img
                       src={currentSlide.image}
                       alt="Question"
-                      className="w-full h-full object-cover rounded-xl shadow-lg"
+                      className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
                     />
                   </motion.div>
                 )}
@@ -269,14 +373,6 @@ export default function StudySet() {
                           : "border-[#FFD700] bg-[#500000]/70"
                       } backdrop-blur-sm shadow-lg`}
                     >
-                      <input
-                        type="radio"
-                        name="preview-answer"
-                        value={option}
-                        checked={option === selectedAnswer}
-                        onChange={() => handleAnswerSelect(option)}
-                        className="form-radio h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
-                      />
                       <span className="ml-4 text-[#FFD700] text-lg">
                         {option || `Option ${index + 1}`}
                       </span>
@@ -328,56 +424,6 @@ export default function StudySet() {
                   >
                     {currentSlide.correctAnswer || "No correct answer set"}
                   </motion.div>
-                </div>
-
-                {/* Image Box Size */}
-                <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Image Box Size:</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-[#FFD700] text-sm font-medium mb-2">Width:</label>
-                      <motion.input
-                        whileFocus={{ scale: 1.02 }}
-                        type="number"
-                        value={imageBoxSize.width}
-                        onChange={(e) =>
-                          setImageBoxSize((prev) => ({ ...prev, width: e.target.value }))
-                        }
-                        className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
-                        placeholder="Width"
-                        min="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[#FFD700] text-sm font-medium mb-2">Height:</label>
-                      <motion.input
-                        whileFocus={{ scale: 1.02 }}
-                        type="number"
-                        value={imageBoxSize.height}
-                        onChange={(e) =>
-                          setImageBoxSize((prev) => ({ ...prev, height: e.target.value }))
-                        }
-                        className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
-                        placeholder="Height"
-                        min="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[#FFD700] text-sm font-medium mb-2">Unit:</label>
-                      <motion.select
-                        whileFocus={{ scale: 1.02 }}
-                        value={imageBoxSize.unit}
-                        onChange={(e) =>
-                          setImageBoxSize((prev) => ({ ...prev, unit: e.target.value }))
-                        }
-                        className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
-                      >
-                        <option value="%">%</option>
-                        <option value="px">px</option>
-                        <option value="rem">rem</option>
-                      </motion.select>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Download Set Button */}
