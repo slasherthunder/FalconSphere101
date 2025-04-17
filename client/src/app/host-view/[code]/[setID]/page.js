@@ -18,19 +18,31 @@ export default function HostView({ params }) {
   const code = use(params).code;
   const setID = useParams().setID;
 
+  const [gameStarted, setGameStarted] = useState(false)
+
   const [PlayerData, setPlayerData] = useState([]);
 
   //Retrieves Player Data from local storage
   useEffect( () =>{
     addCodeToFireBase()
+
+  }, []);
+
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    console.log("This runs every second");
     const myFunc = async () => {
       const docRef = doc(db, "game", code)
       const newDoc = await getDoc(docRef);
       const players = newDoc.data().players
       setPlayerData(players)
     }
-// myFunc()
-  }, []);
+myFunc()
+  }, 1000); // 1000ms = 1 second
+
+  return () => clearInterval(interval); // Cleanup on unmount
+}, []);
 
   useEffect(() =>{
     socket.on("ChangeSlideNumber", (slideData) =>{
@@ -40,6 +52,9 @@ export default function HostView({ params }) {
             player.name === slideData.name ? { ...player, slideNumber: slideData.slide, score: slideData.score } : player
           )
         );
+      })
+      socket.on("ChangeGameScreen", (data) => {
+      router.push("/study-set/play/" + data.id + "/" + data.code)
       })
   }, [socket]);
 
@@ -124,6 +139,11 @@ const [hasUpdated, setHasUpdated]= useState(false);
 
     return () => unsubscribe();
   }, [code]);
+
+const startGame = () => {
+  socket.emit("StartGame", {code: code, id: setID})
+}
+
 
   const endGame = async () => {
     if (window.confirm("Are you sure you want to end the game?")) {
@@ -252,7 +272,7 @@ const [hasUpdated, setHasUpdated]= useState(false);
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <motion.button
+{   gameStarted &&       <motion.button
             onClick={endGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -260,8 +280,20 @@ const [hasUpdated, setHasUpdated]= useState(false);
               font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2
               hover:bg-[#FFC300]"
           >
+            
             <FaStop /> End Game
-          </motion.button>
+          </motion.button>}
+{    !gameStarted &&      <motion.button
+            onClick={startGame}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl 
+              font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2
+              hover:bg-[#FFC300]"
+          >
+            
+            <FaStop /> Start Game
+          </motion.button>}
         </motion.div>
       </motion.div>
     </div>
