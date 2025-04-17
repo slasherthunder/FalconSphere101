@@ -108,9 +108,16 @@ export default function JoinGame() {
     }
 
 
-
+    const fetchSetId = async () => {
+      const docRef = doc(db, "game", sessionCode)
+      const docSnap = await getDoc(docRef)
+      const setID = docSnap.data().slideID
+      console.log(setID)
+      return setID
+    }
+    const setID = await fetchSetId()
     // All validations passed, proceed with joining
-    router.push(`/dynamic-page/new-test/` + sessionCode);
+    router.push("/host-view/" + sessionCode + "/" + setID);
     sessionStorage.setItem("name", playerName)
     const JoinData = {
       name: playerName,

@@ -8,53 +8,38 @@ import { useRouter } from 'next/navigation';
 import { useParams } from "next/navigation";
 
 import {io} from "socket.io-client";
+// import { L } from "framer-motion/dist/types.d-6pKw1mTI";
 const socket = io("http://localhost:5000");
 
 export default function NewGame() {
 
   const { id } = useParams(); // Get unique ID from URL
   const [once, setOnce] = useState(true)
+  const [setID, setSetID] = useState("")
   useEffect (() => {
     localStorage.setItem("PossibleSession", id);
     if (once){
       setOnce(false)
-      addCodeToFireBase()
+      // addCodeToFireBase()
     }
 
   },[]);
 
 
-  const addCodeToFireBase = async () => {
-    const gameDoc = doc(db, "game", id)
-    const newDoc = await getDoc(gameDoc)
-    if (newDoc.exists()){
-      console.log("Hello")
-      return
-    }else{
-      try {
-        await setDoc(doc(db, "game", id), {
-          code: id,
-          players: []
-        });
-      } catch (e) {
-        console.error("Error adding document: ", e);
-      }
-    }
 
-  };
 
   //Saves the slide data as part of the game database in firebase
-  const updateSlideID = async (code, slide) => {
-    try {
-      const docRef = doc(db, "game", code);
-      await updateDoc(docRef, {
-        slideID: slide
+  // const updateSlideID = async (code, slide) => {
+  //   try {
+  //     const docRef = doc(db, "game", code);
+  //     await updateDoc(docRef, {
+  //       slideID: slide
   
-      });
-    } catch (e) {
-      console.error("Error updating slideID: ", e);
-    }
-  };
+  //     });
+  //   } catch (e) {
+  //     console.error("Error updating slideID: ", e);
+  //   }
+  // };
 
   const router = useRouter();
   const [sessionCode, setSessionCode] = useState("");
@@ -133,11 +118,11 @@ useEffect(() => {
   // Handle set selection and save it to Firestore
   const handleSetSelection = async (setId) => {
     const selected = availableSets.find((set) => set.id === setId);
+    setSetID(selected.id)
     if (selected) {
       setSelectedSet(selected);
       const sessionRef = doc(db, "sessions", sessionCode);
       await setDoc(sessionRef, { selectedSet: selected }, { merge: true });
-      updateSlideID(id, selected)
     }
   };
 
@@ -191,8 +176,8 @@ useEffect(() => {
 
     // Navigate to host view
     // router.push(`/host-view/${sessionCode}`);
-    socket.emit("StartGame", selectedSet.id)
-    router.push(`/host-view/${id}`)
+    // socket.emit("StartGame", selectedSet.id)
+    router.push(`/host-view/${id}/${setID}`)
 
     
   };

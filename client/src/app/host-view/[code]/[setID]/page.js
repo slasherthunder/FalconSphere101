@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { db } from "../../../components/firebase";
+import { db } from "../../../../components/firebase";
 import { FaCrown, FaPlay, FaStop } from "react-icons/fa";
 import { useParams, useRouter } from 'next/navigation';
-import { collection, getDocs, doc, setDoc, addDoc , getDoc, onSnapshot} from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc , getDoc, onSnapshot, updateDoc} from "firebase/firestore";
 
 import { io } from "socket.io-client";
 
@@ -16,18 +16,20 @@ export default function HostView({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const code = use(params).code;
+  const setID = useParams().setID;
 
   const [PlayerData, setPlayerData] = useState([]);
 
   //Retrieves Player Data from local storage
   useEffect( () =>{
+    addCodeToFireBase()
     const myFunc = async () => {
       const docRef = doc(db, "game", code)
       const newDoc = await getDoc(docRef);
       const players = newDoc.data().players
       setPlayerData(players)
     }
-myFunc()
+// myFunc()
   }, []);
 
   useEffect(() =>{
@@ -40,6 +42,39 @@ myFunc()
         );
       })
   }, [socket]);
+
+  const updateSlideID = async () => {
+    try {
+      const docRef = doc(db, "game", code);
+      await updateDoc(docRef, {
+        slideID: setID
+  
+      });
+    } catch (e) {
+      console.error("Error updating slideID: ", e);
+    }
+  };
+
+
+  const addCodeToFireBase = async () => {
+    const gameDoc = doc(db, "game", code)
+    const newDoc = await getDoc(gameDoc)
+    if (newDoc.exists()){
+      console.log("Hello")
+      return
+    }else{
+      try {
+        await setDoc(doc(db, "game", code), {
+          code: code,
+          players: []
+        });
+        updateSlideID()
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
+    }
+
+  };
   
   // useEffect(() => {
   //   // Run function every 10 milliseconds
