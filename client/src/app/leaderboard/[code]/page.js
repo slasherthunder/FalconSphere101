@@ -177,14 +177,6 @@ const LeaderboardPage = () => {
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-3xl md:text-4xl font-bold text-[#FFD700]">Leaderboard</h1>
-          <div className="flex gap-2">
-            <button
-              onClick={exportToCSV}
-              className="bg-[#FFD700] hover:bg-[#FFC000] text-[#8B0000] font-bold py-2 px-4 rounded-lg transition-colors duration-200 text-sm md:text-base"
-            >
-              Export Full Analytics
-            </button>
-          </div>
         </div>
         
         <div className="space-y-4">
