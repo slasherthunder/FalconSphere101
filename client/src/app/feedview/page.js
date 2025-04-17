@@ -152,6 +152,7 @@ export default function QuestionFeed() {
   const [difficulty, setDifficulty] = useState("medium");
   const [showReactions, setShowReactions] = useState(null);
   const [userId, setUserId] = useState("");
+  const [popularTags, setPopularTags] = useState([]);
   const questionsPerPage = 5;
   const characterLimit = 200;
 
@@ -162,6 +163,26 @@ export default function QuestionFeed() {
       localStorage.setItem("votes", JSON.stringify({}));
     }
   }, []);
+
+  useEffect(() => {
+    // Calculate popular tags based on usage frequency
+    const tagCounts = {};
+    questions.forEach((question) => {
+      question.tags.forEach((tag) => {
+        if (PREDEFINED_TAGS.includes(tag)) {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        }
+      });
+    });
+    
+    // Sort tags by popularity and take top 5
+    const sortedPopularTags = Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag]) => tag);
+    
+    setPopularTags(sortedPopularTags);
+  }, [questions]);
 
   const validateProfanity = (text) => {
     return filter.isProfane(text);
@@ -385,7 +406,8 @@ export default function QuestionFeed() {
       id: Date.now(),
       text: replyText,
       date: new Date().toISOString(),
-      userId: userId, // Store userId of the reply author
+      userId: userId,
+      reactions: {},
     };
 
     const questionRef = doc(db, "questions", id);
@@ -423,6 +445,27 @@ export default function QuestionFeed() {
     reactions[reaction] = (reactions[reaction] || 0) + 1;
     await updateDoc(questionRef, { reactions });
     setShowReactions(null);
+  };
+
+  const handleReplyReaction = async (questionId, replyId, reaction) => {
+    const questionRef = doc(db, "questions", questionId);
+    const question = questions.find((q) => q.id === questionId);
+    const reply = question.replies.find((r) => r.id === replyId);
+    
+    // Initialize reactions if not exists
+    if (!reply.reactions) {
+      reply.reactions = {};
+    }
+    
+    // Update reaction count
+    reply.reactions[reaction] = (reply.reactions[reaction] || 0) + 1;
+    
+    // Update the question in Firestore
+    await updateDoc(questionRef, {
+      replies: question.replies.map(r => 
+        r.id === replyId ? { ...r, reactions: reply.reactions } : r
+      )
+    });
   };
 
   useEffect(() => {
@@ -463,8 +506,6 @@ export default function QuestionFeed() {
   );
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  const allTags = [...new Set(questions.flatMap((q) => q.tags))];
 
   return (
     <div className="min-h-screen w-full bg-[#8B0000] py-12">
@@ -511,8 +552,27 @@ export default function QuestionFeed() {
             Sort by Votes
           </motion.button>
 
-          {/* Tag Filters */}
-          <h3 className="text-[#FFD700] font-bold mt-6 mb-2">Tags</h3>
+          {/* Popular Tags Section */}
+          <h3 className="text-[#FFD700] font-bold mt-6 mb-2">Popular Tags</h3>
+          <div className="space-y-2 mb-6">
+            {popularTags.map((tag) => (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                key={tag}
+                onClick={() => setSelectedTag(tag)}
+                className={`w-full p-2 ${
+                  selectedTag === tag
+                    ? "bg-[#FFD700] text-[#8B0000]"
+                    : "bg-[#600000] text-[#FFD700]"
+                } rounded-lg font-bold transition duration-300`}
+              >
+                {tag}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* All Tags Section */}
+          <h3 className="text-[#FFD700] font-bold mt-6 mb-2">All Tags</h3>
           <div className="space-y-2">
             <motion.button
               onClick={() => setSelectedTag(null)}
@@ -525,7 +585,7 @@ export default function QuestionFeed() {
             >
               All Tags
             </motion.button>
-            {allTags.map((tag) => (
+            {PREDEFINED_TAGS.map((tag) => (
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 key={tag}
@@ -838,27 +898,88 @@ export default function QuestionFeed() {
                         {question.replies.map((reply) => (
                           <div key={reply.id} className="bg-[#700000] p-4 rounded-lg mb-2">
                             <p className="text-[#FFD700]">{reply.text}</p>
-                            <div className="flex justify-between mt-2">
-                              <span className="text-[#FFD700] text-sm">{new Date(reply.date).toLocaleString()}</span>
-                              {isReplyOwner(reply) && (
-                                <div className="flex items-center">
-                                  <motion.button
-                                    onClick={() => handleEditReply(reply.id, question.id, reply.text)}
-                                    whileHover={{ scale: 1.05 }}
-                                    className="text-[#FFD700] hover:text-[#FFA500] flex items-center"
-                                  >
-                                    <FaEdit className="mr-2" /> Edit
-                                  </motion.button>
-                                  <motion.button
-                                    onClick={() => handleDeleteReply(reply.id, question.id)}
-                                    whileHover={{ scale: 1.05 }}
-                                    className="text-[#FFD700] hover:text-[#FF0000] flex items-center"
-                                  >
-                                    <FaTrash className="mr-2" /> Delete
-                                  </motion.button>
-                                </div>
-                              )}
+                            
+                            {/* Reply Reactions */}
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="flex flex-wrap gap-1">
+                                {reply.reactions &&
+                                  Object.entries(reply.reactions).map(
+                                    ([reaction, count]) => (
+                                      <span
+                                        key={reaction}
+                                        className="bg-[#600000] px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                                      >
+                                        {reaction === "smile" && <BsEmojiSmile />}
+                                        {reaction === "love" && <BsEmojiHeartEyes />}
+                                        {reaction === "angry" && <BsEmojiAngry />}
+                                        {reaction === "thinking" && <BsEmojiNeutral />}
+                                        {reaction === "confused" && <BsEmojiDizzy />}
+                                        {reaction === "haha" && <BsEmojiLaughing />}
+                                        {reaction === "cool" && <BsEmojiSunglasses />}
+                                        {reaction === "celebrate" && <BsStars />}
+                                        {reaction === "helpful" && <FaThumbsUp />}
+                                        <span className="ml-1">{count}</span>
+                                      </span>
+                                    )
+                                  )}
+                              </div>
+                              
+                              {/* Reaction Picker */}
+                              <div className="flex flex-wrap gap-1">
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  onClick={() => handleReplyReaction(question.id, reply.id, "smile")}
+                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                                  title="Smile"
+                                >
+                                  <BsEmojiSmile className="text-sm" />
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  onClick={() => handleReplyReaction(question.id, reply.id, "love")}
+                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                                  title="Love"
+                                >
+                                  <BsEmojiHeartEyes className="text-sm" />
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  onClick={() => handleReplyReaction(question.id, reply.id, "haha")}
+                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                                  title="Haha"
+                                >
+                                  <BsEmojiLaughing className="text-sm" />
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  onClick={() => handleReplyReaction(question.id, reply.id, "helpful")}
+                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                                  title="Helpful"
+                                >
+                                  <FaThumbsUp className="text-sm" />
+                                </motion.button>
+                              </div>
                             </div>
+
+                            {/* Reply Actions */}
+                            {isReplyOwner(reply) && (
+                              <div className="flex justify-end mt-2">
+                                <motion.button
+                                  onClick={() => handleEditReply(reply.id, question.id, reply.text)}
+                                  whileHover={{ scale: 1.05 }}
+                                  className="text-[#FFD700] hover:text-[#FFA500] flex items-center"
+                                >
+                                  <FaEdit className="mr-2" /> Edit
+                                </motion.button>
+                                <motion.button
+                                  onClick={() => handleDeleteReply(reply.id, question.id)}
+                                  whileHover={{ scale: 1.05 }}
+                                  className="text-[#FFD700] hover:text-[#FF0000] flex items-center"
+                                >
+                                  <FaTrash className="mr-2" /> Delete
+                                </motion.button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
