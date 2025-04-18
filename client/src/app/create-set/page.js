@@ -1,10 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
 import { db } from "../../components/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { motion, AnimatePresence } from "framer-motion";
+import { collection, addDoc } from "firebase/firestore";
+import { Filter } from "bad-words";
+import { motion } from "framer-motion";
 import { saveAs } from 'file-saver';
+import { parse } from 'papaparse';
+
+const filter = new Filter();
 
 // Animation variants
 const containerVariants = {
@@ -12,16 +15,34 @@ const containerVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: {
+      duration: 0.6,
+      ease: "easeOut"
+    }
   }
 };
 
-const cardVariants = {
-  hidden: { opacity: 0, scale: 0.95 },
+const formVariants = {
+  hidden: { opacity: 0, x: -20 },
   visible: {
     opacity: 1,
-    scale: 1,
-    transition: { duration: 0.4, ease: "easeOut" }
+    x: 0,
+    transition: {
+      duration: 0.4,
+      delay: 0.2
+    }
+  }
+};
+
+const previewVariants = {
+  hidden: { opacity: 0, x: 20 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.4,
+      delay: 0.2
+    }
   }
 };
 
@@ -37,245 +58,360 @@ const buttonVariants = {
   tap: { scale: 0.95 }
 };
 
-export default function StudySet() {
-  const { id } = useParams();
-  const router = useRouter();
-  const [setData, setSetData] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function CreateSet() {
+  const [title, setTitle] = useState("");
+  const [slides, setSlides] = useState([
+    {
+      question: "",
+      options: ["", "", "", ""],
+      correctAnswer: "",
+      imageData: null,
+    },
+  ]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState("");
-  const [score, setScore] = useState(0);
-  const [showResult, setShowResult] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState("");
+  const [duplicateOptions, setDuplicateOptions] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Fetch the set data from Firestore
-  useEffect(() => {
-    const fetchSetData = async () => {
-      try {
-        const docRef = doc(db, "sets", id);
-        const docSnap = await getDoc(docRef);
+  const convertToCSV = () => {
+    if (!title) {
+      setError("Please add a title before exporting");
+      return null;
+    }
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setSetData(data);
-        } else {
-          console.log("No such document!");
+    let csv = "Question,Option1,Option2,Option3,Option4,CorrectAnswer,ImageData\n";
+    
+    slides.forEach(slide => {
+      const imageData = slide.imageData ? 
+        slide.imageData.split(',')[1] || slide.imageData : 
+        '';
+      
+      const row = [
+        `"${(slide.question || '').replace(/"/g, '""')}"`,
+        ...slide.options.map(opt => `"${(opt || '').replace(/"/g, '""')}"`),
+        `"${(slide.correctAnswer || '').replace(/"/g, '""')}"`,
+        imageData ? `"${imageData}"` : '""'
+      ].join(",");
+      
+      csv += row + "\n";
+    });
+
+    return csv;
+  };
+
+  const exportToCSV = () => {
+    setIsExporting(true);
+    try {
+      const csv = convertToCSV();
+      if (!csv) return;
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `${title.replace(/\s+/g, '_')}_quiz.csv`);
+      setSuccessMessage("Set exported as CSV successfully!");
+    } catch (error) {
+      setError("Failed to export CSV: " + error.message);
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
+  };
+
+  const importFromCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setError("");
+    setSuccessMessage("");
+
+    parse(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (results) => {
+        try {
+          if (results.data.length < 2) {
+            setError("CSV file must contain at least one question row");
+            return;
+          }
+
+          const firstRow = results.data[0];
+          let startIndex = 0;
+          if (firstRow.some(cell => typeof cell === 'string' && 
+              (cell.toLowerCase().includes("question") || 
+               cell.toLowerCase().includes("answer")))) {
+            startIndex = 1;
+          }
+
+          const importedSlides = [];
+          for (let i = startIndex; i < results.data.length; i++) {
+            const row = results.data[i];
+            if (!row[0]) continue;
+
+            const options = [];
+            for (let j = 1; j <= 4; j++) {
+              options.push(row[j] || "");
+            }
+
+            const correctAnswer = row[5] || "";
+            let imageData = null;
+
+            if (row[6] && row[6].trim() !== "") {
+              if (row[6].startsWith('data:')) {
+                imageData = row[6];
+              } else {
+                imageData = `data:image/jpeg;base64,${row[6]}`;
+              }
+            }
+
+            importedSlides.push({
+              question: row[0],
+              options: options,
+              correctAnswer: correctAnswer,
+              imageData: imageData
+            });
+          }
+
+          if (importedSlides.length === 0) {
+            setError("No valid questions found in CSV");
+            return;
+          }
+
+          setTitle(file.name.replace('.csv', '').replace(/_/g, ' '));
+          setSlides(importedSlides);
+          setCurrentSlideIndex(0);
+          setSuccessMessage(`Successfully imported ${importedSlides.length} questions!`);
+        } catch (error) {
+          setError("Error processing CSV: " + error.message);
+        } finally {
+          setTimeout(() => setSuccessMessage(""), 5000);
         }
-      } catch (error) {
-        console.error("Error fetching set data: ", error);
-        setError("Failed to load set data");
-      } finally {
-        setLoading(false);
+      },
+      error: (error) => {
+        setError(`Error parsing CSV: ${error.message}`);
       }
+    });
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.match('image.*')) {
+      setError("Please select an image file (JPEG, PNG, etc.)");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image must be smaller than 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const newSlides = [...slides];
+      newSlides[currentSlideIndex].imageData = event.target.result;
+      setSlides(newSlides);
+      setError("");
+    };
+    reader.onerror = () => {
+      setError("Failed to read image file");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].imageData = null;
+    setSlides(newSlides);
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = "";
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!title.trim()) {
+      setError("Please enter a title for your set");
+      return;
+    }
+
+    if (validateProfanity(title)) {
+      setError("Title contains inappropriate language");
+      return;
+    }
+
+    for (const slide of slides) {
+      if (!slide.question.trim()) {
+        setError(`Please enter a question for slide ${slides.indexOf(slide) + 1}`);
+        return;
+      }
+
+      if (validateProfanity(slide.question)) {
+        setError(`Question in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
+        return;
+      }
+
+      const validOptions = slide.options.filter(opt => opt.trim() !== "");
+      if (validOptions.length < 2) {
+        setError(`Slide ${slides.indexOf(slide) + 1} needs at least 2 options`);
+        return;
+      }
+
+      if (!slide.correctAnswer.trim()) {
+        setError(`Please select a correct answer for slide ${slides.indexOf(slide) + 1}`);
+        return;
+      }
+
+      for (const option of slide.options) {
+        if (validateProfanity(option)) {
+          setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
+          return;
+        }
+      }
+
+      const hasDuplicates = new Set(
+        slide.options.filter(opt => opt.trim() !== "")
+      ).size !== slide.options.filter(opt => opt.trim() !== "").length;
+
+      if (hasDuplicates) {
+        setError(`Options must be unique in slide ${slides.indexOf(slide) + 1}`);
+        return;
+      }
+    }
+
+    const setData = {
+      title,
+      slides: slides.map(slide => ({
+        question: slide.question,
+        options: slide.options,
+        correctAnswer: slide.correctAnswer,
+        imageData: slide.imageData || null
+      })),
+      createdAt: new Date().toISOString(),
     };
 
-    fetchSetData();
-  }, [id]);
-
-  // Handle answer selection
-  const handleAnswerSelect = (option) => {
-    setSelectedAnswer(option);
-  };
-
-  // Handle moving to the next question
-  const handleNextQuestion = () => {
-    if (selectedAnswer === setData.slides[currentSlideIndex].correctAnswer) {
-      setScore(score + 1);
-    }
-
-    if (currentSlideIndex < setData.slides.length - 1) {
-      setCurrentSlideIndex(currentSlideIndex + 1);
-      setSelectedAnswer("");
-    } else {
-      setShowResult(true);
-    }
-  };
-
-  // Restart the quiz
-  const restartQuiz = () => {
-    setCurrentSlideIndex(0);
-    setSelectedAnswer("");
-    setScore(0);
-    setShowResult(false);
-    setIsPlaying(false);
-  };
-
-  // Download the set as a JSON file
-  const downloadSet = () => {
     try {
-      const jsonString = JSON.stringify(setData, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
-      saveAs(blob, `${setData.title.replace(/\s+/g, "_")}_set.json`);
-      setSuccessMessage("Set downloaded successfully!");
-      setTimeout(() => setSuccessMessage(""), 3000);
+      const docRef = await addDoc(collection(db, "sets"), setData);
+      
+      const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
+      const newUserSets = [{ id: docRef.id, ...setData }, ...storedUserSets].slice(0, 5);
+      localStorage.setItem("userSets", JSON.stringify(newUserSets));
+
+      setTitle("");
+      setSlides([{
+        question: "",
+        options: ["", "", "", ""],
+        correctAnswer: "",
+        imageData: null,
+      }]);
+      setCurrentSlideIndex(0);
+      setDuplicateOptions([]);
+      setError("");
+      setSuccessMessage("Set created successfully!");
     } catch (error) {
-      setError("Failed to download set");
+      console.error("Error saving set: ", error);
+      setError("Failed to save the set. Please try again.");
+    } finally {
+      setTimeout(() => setSuccessMessage(""), 3000);
     }
   };
 
-  // Start playing the set
-  const startPlaying = () => {
-    setIsPlaying(true);
-    setCurrentSlideIndex(0);
-    setSelectedAnswer("");
-    setScore(0);
-    setShowResult(false);
+  const handleAddSlide = () => {
+    setSlides([
+      ...slides,
+      {
+        question: "",
+        options: ["", "", "", ""],
+        correctAnswer: "",
+        imageData: null,
+      },
+    ]);
+    setCurrentSlideIndex(slides.length);
   };
 
-  // Copy set to create a new one
-  const handleCopySet = () => {
-    localStorage.setItem('copiedSet', JSON.stringify({
-      ...setData,
-      title: `${setData.title} (Copy)`,
-      createdAt: new Date().toISOString(),
-    }));
-    router.push('/create-set');
+  const handleDeleteSlide = (index) => {
+    if (slides.length > 1) {
+      const newSlides = slides.filter((_, i) => i !== index);
+      setSlides(newSlides);
+      setCurrentSlideIndex(Math.min(currentSlideIndex, newSlides.length - 1));
+    } else {
+      setError("A set must have at least one slide");
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
-        >
-          <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#FFD700] text-2xl font-semibold">Loading set...</p>
-        </motion.div>
-      </div>
-    );
-  }
+  const handleQuestionChange = (value) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].question = value;
+    setSlides(newSlides);
+  };
 
-  if (!setData) {
-    return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
-        >
-          <p className="text-[#FFD700] text-2xl font-semibold">Set not found.</p>
-        </motion.div>
-      </div>
-    );
-  }
+  const handleOptionChange = (index, value) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].options[index] = value;
+    setSlides(newSlides);
+    checkForDuplicates(newSlides[currentSlideIndex].options);
+  };
 
-  if (isPlaying) {
-    const currentSlide = setData.slides[currentSlideIndex];
-    
-    return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="w-full max-w-4xl"
-        >
-          {showResult ? (
-            <motion.div
-              className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h2 className="text-4xl text-[#FFD700] font-bold mb-6">Quiz Completed!</h2>
-              <p className="text-2xl text-[#FFD700] mb-8">
-                Your score: {score} out of {setData.slides.length}
-              </p>
-              <motion.button
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                onClick={restartQuiz}
-                className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
-              >
-                Play Again
-              </motion.button>
-            </motion.div>
-          ) : (
-            <motion.div
-              className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20]"
-              variants={cardVariants}
-            >
-              <div className="mb-6 flex justify-between items-center">
-                <span className="text-[#FFD700] text-xl">
-                  Question {currentSlideIndex + 1} of {setData.slides.length}
-                </span>
-                <span className="text-[#FFD700] text-xl">Score: {score}</span>
-              </div>
+  const handleRemoveOption = (index) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].options.splice(index, 1);
+    setSlides(newSlides);
+    checkForDuplicates(newSlides[currentSlideIndex].options);
+  };
 
-              <motion.h3
-                className="text-3xl text-[#FFD700] font-bold mb-6"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                {currentSlide.question}
-              </motion.h3>
+  const handleCorrectAnswerChange = (value) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].correctAnswer = value;
+    setSlides(newSlides);
+  };
 
-              {currentSlide.imageData && (
-                <motion.div
-                  className="relative overflow-hidden rounded-xl mb-8"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                >
-                  <img
-                    src={currentSlide.imageData}
-                    alt="Question"
-                    className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
-                  />
-                </motion.div>
-              )}
+  const handleAddOption = () => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].options.push("");
+    setSlides(newSlides);
+  };
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {currentSlide.options.map((option, index) => (
-                  <motion.button
-                    key={index}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleAnswerSelect(option)}
-                    className={`p-6 rounded-xl text-xl font-semibold transition-all duration-300 ${
-                      selectedAnswer === option
-                        ? option === currentSlide.correctAnswer
-                          ? "bg-green-600 text-white"
-                          : "bg-red-600 text-white"
-                        : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
-                    }`}
-                    disabled={selectedAnswer !== ""}
-                  >
-                    {option}
-                  </motion.button>
-                ))}
-              </div>
+  const checkForDuplicates = (options) => {
+    const optionCounts = {};
+    const duplicates = [];
 
-              <motion.button
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                onClick={handleNextQuestion}
-                disabled={!selectedAnswer}
-                className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-all duration-300 ${
-                  selectedAnswer
-                    ? "bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300]"
-                    : "bg-gray-500 text-gray-300 cursor-not-allowed"
-                }`}
-              >
-                {currentSlideIndex < setData.slides.length - 1 ? "Next Question" : "Finish Quiz"}
-              </motion.button>
-            </motion.div>
-          )}
-        </motion.div>
-      </div>
-    );
-  }
+    options.forEach((option, index) => {
+      if (option.trim() !== "") {
+        if (optionCounts[option]) {
+          duplicates.push(index);
+          optionCounts[option].push(index);
+        } else {
+          optionCounts[option] = [index];
+        }
+      }
+    });
 
-  const currentSlide = setData.slides[currentSlideIndex];
+    const allDuplicates = Object.values(optionCounts)
+      .filter((indices) => indices.length > 1)
+      .flat();
+
+    setDuplicateOptions(allDuplicates);
+  };
+
+  const validateProfanity = (text) => {
+    return filter.isProfane(text);
+  };
+
+  useEffect(() => {
+    const copiedSet = localStorage.getItem('copiedSet');
+    if (copiedSet) {
+      try {
+        const setData = JSON.parse(copiedSet);
+        setTitle(setData.title);
+        setSlides(setData.slides);
+        localStorage.removeItem('copiedSet');
+      } catch (error) {
+        setError('Error loading copied set data');
+      }
+    }
+  }, []);
+
+  const currentSlide = slides[currentSlideIndex];
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4">
@@ -297,46 +433,51 @@ export default function StudySet() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              Study Set: {setData.title}
+              Create New Set
             </motion.h2>
-            <div className="flex flex-col sm:flex-row gap-4 mt-4 sm:mt-0">
+            <div className="flex gap-4 mt-4 sm:mt-0">
               <motion.button
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
-                onClick={handleCopySet}
-                className="flex items-center gap-2 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                onClick={exportToCSV}
+                disabled={isExporting}
+                className="flex items-center gap-2 px-6 py-3 bg-[#FFD700] text-[#8B0000] font-bold rounded-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300 disabled:opacity-50"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                <span>Copy Set</span>
+                {isExporting ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Exporting...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>Export CSV</span>
+                  </>
+                )}
               </motion.button>
-              <motion.button
+              <motion.label
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
-                onClick={startPlaying}
-                className="flex items-center gap-2 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                className="flex items-center gap-2 px-6 py-3 bg-[#FFD700] text-[#8B0000] font-bold rounded-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300 cursor-pointer"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <span>Play Set</span>
-              </motion.button>
-              <motion.button
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                onClick={downloadSet}
-                className="flex items-center gap-2 bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-[#FFC300] transition-all duration-300"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                <span>Download</span>
-              </motion.button>
+                <span>Import CSV</span>
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={importFromCSV} 
+                  className="hidden" 
+                />
+              </motion.label>
             </div>
           </div>
 
@@ -369,18 +510,44 @@ export default function StudySet() {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Preview Section */}
             <motion.div
-              variants={cardVariants}
+              variants={previewVariants}
               initial="hidden"
               animate="visible"
               className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
             >
               <div className="flex justify-between items-start mb-8">
                 <h2 className="text-3xl text-[#FFD700] font-bold">Preview</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#FFD700] text-lg">
-                    Slide {currentSlideIndex + 1} of {setData.slides.length}
+                <motion.button
+                  variants={buttonVariants}
+                  whileHover={{ 
+                    scale: 1.05,
+                    backgroundColor: "rgba(220, 38, 38, 0.8)",
+                    transition: { duration: 0.2 }
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={() => handleDeleteSlide(currentSlideIndex)}
+                  className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-[#600000] border border-[#FFD700]/30 hover:border-[#FF0000] transition-all duration-300"
+                  title="Delete this slide"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 text-[#FF6B6B] group-hover:text-[#FF0000] transition-colors"
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                    />
+                  </svg>
+                  <span className="text-[#FFD700] text-sm font-medium group-hover:text-white">
+                    Delete Slide
                   </span>
-                </div>
+                </motion.button>
               </div>
 
               <motion.div 
@@ -393,7 +560,7 @@ export default function StudySet() {
                   className="text-[#FFD700] text-4xl font-semibold mb-4"
                   whileHover={{ scale: 1.01 }}
                 >
-                  {setData.title}
+                  {title || "Name of Set"}
                 </motion.div>
                 <motion.div 
                   className="text-[#FFD700] text-xl font-semibold"
@@ -410,8 +577,22 @@ export default function StudySet() {
                     <img
                       src={currentSlide.imageData}
                       alt="Question"
-                      className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
+                      className="w-full h-auto max-h-64 object-contain rounded-xl shadow-lg bg-black bg-opacity-50 p-2"
+                      onError={(e) => {
+                        e.target.onerror = null; 
+                        e.target.src = "/image-placeholder.png";
+                        e.target.className = "w-full h-auto max-h-64 object-contain rounded-xl shadow-lg bg-black bg-opacity-50 p-2 border border-red-500";
+                      }}
                     />
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 bg-red-600/90 backdrop-blur-sm text-white w-8 h-8 flex items-center justify-center rounded-full shadow-lg"
+                    >
+                      ×
+                    </motion.button>
                   </motion.div>
                 )}
                 <div className="space-y-3">
@@ -421,11 +602,19 @@ export default function StudySet() {
                       whileHover={{ scale: 1.02, x: 5 }}
                       transition={{ duration: 0.2 }}
                       className={`flex items-center p-4 rounded-xl border-2 ${
-                        option === currentSlide.correctAnswer
-                          ? "border-green-500 bg-green-900/50"
+                        duplicateOptions.includes(index)
+                          ? "border-red-500 bg-red-900/50"
                           : "border-[#FFD700] bg-[#500000]/70"
                       } backdrop-blur-sm shadow-lg`}
                     >
+                      <input
+                        type="radio"
+                        name="preview-answer"
+                        value={option}
+                        checked={option === currentSlide.correctAnswer}
+                        readOnly
+                        className="form-radio h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
+                      />
                       <span className="ml-4 text-[#FFD700] text-lg">
                         {option || `Option ${index + 1}`}
                       </span>
@@ -435,20 +624,34 @@ export default function StudySet() {
               </motion.div>
             </motion.div>
 
-            {/* Information Section */}
+            {/* Edit Section */}
             <motion.div
-              variants={cardVariants}
+              variants={formVariants}
               initial="hidden"
               animate="visible"
               className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
             >
-              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Slide Navigation</h2>
-              <div className="space-y-8">
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Edit Set</h2>
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Set Title */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Title:</label>
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    placeholder="Enter title"
+                    required
+                  />
+                </div>
+
                 {/* Slide Navigation */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Go to Slide:</label>
-                  <div className="flex flex-wrap gap-3">
-                    {setData.slides.map((_, index) => (
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Slide:</label>
+                  <div className="flex flex-wrap gap-2">
+                    {slides.map((_, index) => (
                       <motion.button
                         key={index}
                         variants={buttonVariants}
@@ -456,7 +659,7 @@ export default function StudySet() {
                         whileTap="tap"
                         type="button"
                         onClick={() => setCurrentSlideIndex(index)}
-                        className={`px-5 py-3 rounded-xl font-bold shadow-lg ${
+                        className={`px-4 py-2 rounded-lg font-bold shadow-lg ${
                           currentSlideIndex === index
                             ? "bg-[#FFD700] text-[#8B0000]"
                             : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
@@ -465,31 +668,144 @@ export default function StudySet() {
                         {index + 1}
                       </motion.button>
                     ))}
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      type="button"
+                      onClick={handleAddSlide}
+                      className="flex items-center gap-1 px-4 py-2 rounded-lg font-bold bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition-all duration-300 shadow-lg"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>Add</span>
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Question */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Question:</label>
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type="text"
+                    value={currentSlide.question}
+                    onChange={(e) => handleQuestionChange(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    placeholder="Enter your question"
+                    required
+                  />
+                </div>
+
+                {/* Image */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Image:</label>
+                  <motion.label
+                    whileHover={{ scale: 1.01 }}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 flex flex-col items-center justify-center gap-2 cursor-pointer border-dashed border-[#FFD700]/50 hover:border-solid"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#FFD700]/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-center">
+                      {currentSlide.imageData ? "Replace Image" : "Upload Image"}
+                    </span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageChange} 
+                      className="hidden" 
+                    />
+                  </motion.label>
+                  {currentSlide.imageData && (
+                    <div className="mt-2 text-sm text-[#FFD700]/80 flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Image ready
+                    </div>
+                  )}
+                </div>
+
+                {/* Options */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Options:</label>
+                  <div className="space-y-3">
+                    {currentSlide.options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <motion.input
+                          whileFocus={{ scale: 1.02 }}
+                          type="text"
+                          value={option}
+                          onChange={(e) => handleOptionChange(index, e.target.value)}
+                          className={`flex-1 p-3 border-2 rounded-lg bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 ${
+                            duplicateOptions.includes(index) ? "border-red-500" : "border-[#FFD700]"
+                          }`}
+                          placeholder={`Option ${index + 1}`}
+                          required
+                        />
+                        <motion.button
+                          variants={buttonVariants}
+                          whileHover="hover"
+                          whileTap="tap"
+                          type="button"
+                          onClick={() => handleRemoveOption(index)}
+                          className="bg-red-600/90 text-white w-10 h-10 rounded-lg hover:bg-red-700 transition-all duration-300 shadow-lg flex items-center justify-center"
+                        >
+                          ×
+                        </motion.button>
+                      </div>
+                    ))}
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      type="button"
+                      onClick={handleAddOption}
+                      className="bg-[#FFD700] text-[#8B0000] px-5 py-2 rounded-lg font-bold hover:bg-[#FFC300] transition-all duration-300 shadow-lg flex items-center gap-2 justify-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Option
+                    </motion.button>
                   </div>
                 </div>
 
                 {/* Correct Answer */}
                 <div>
                   <label className="block text-[#FFD700] text-lg font-medium mb-3">Correct Answer:</label>
-                  <motion.div 
-                    className="p-4 bg-[#500000]/70 backdrop-blur-sm rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg"
-                    whileHover={{ scale: 1.02 }}
+                  <motion.select
+                    whileFocus={{ scale: 1.02 }}
+                    value={currentSlide.correctAnswer}
+                    onChange={(e) => handleCorrectAnswerChange(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    required
                   >
-                    {currentSlide.correctAnswer || "No correct answer set"}
-                  </motion.div>
+                    <option value="">Select correct answer</option>
+                    {currentSlide.options.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option || `Option ${index + 1}`}
+                      </option>
+                    ))}
+                  </motion.select>
                 </div>
 
-                {/* Set Details */}
-                <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Set Details:</label>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="p-4 bg-[#500000]/70 backdrop-blur-sm rounded-xl border-2 border-[#FFD700]/30 text-[#FFD700]">
-                      <div className="text-sm text-[#FFD700]/80">Total Questions</div>
-                      <div className="text-xl font-bold">{setData.slides.length}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                {/* Save Set Button */}
+                <motion.button
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  type="submit"
+                  className="w-full bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl hover:bg-[#FFC300] transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
+                  Save Set
+                </motion.button>
+              </form>
             </motion.div>
           </div>
         </motion.div>
