@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { db } from "../../../components/firebase";
+import { db } from "../../../../components/firebase";
 import { FaCrown, FaPlay, FaStop } from "react-icons/fa";
 import { useParams, useRouter } from 'next/navigation';
-import { collection, getDocs, doc, setDoc, addDoc , getDoc, onSnapshot} from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, addDoc , getDoc, onSnapshot, updateDoc} from "firebase/firestore";
 
 import { io } from "socket.io-client";
 
@@ -16,11 +16,22 @@ export default function HostView({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const code = use(params).code;
+  const setID = useParams().setID;
+
+  const [gameStarted, setGameStarted] = useState(false)
 
   const [PlayerData, setPlayerData] = useState([]);
 
   //Retrieves Player Data from local storage
   useEffect( () =>{
+    addCodeToFireBase()
+
+  }, []);
+
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    console.log("This runs every second");
     const myFunc = async () => {
       const docRef = doc(db, "game", code)
       const newDoc = await getDoc(docRef);
@@ -28,7 +39,10 @@ export default function HostView({ params }) {
       setPlayerData(players)
     }
 myFunc()
-  }, []);
+  }, 1000); // 1000ms = 1 second
+
+  return () => clearInterval(interval); // Cleanup on unmount
+}, []);
 
   useEffect(() =>{
     socket.on("ChangeSlideNumber", (slideData) =>{
@@ -39,7 +53,43 @@ myFunc()
           )
         );
       })
+      socket.on("ChangeGameScreen", (data) => {
+      router.push("/study-set/play/" + data.id + "/" + data.code)
+      })
   }, [socket]);
+
+  const updateSlideID = async () => {
+    try {
+      const docRef = doc(db, "game", code);
+      await updateDoc(docRef, {
+        slideID: setID
+  
+      });
+    } catch (e) {
+      console.error("Error updating slideID: ", e);
+    }
+  };
+
+
+  const addCodeToFireBase = async () => {
+    const gameDoc = doc(db, "game", code)
+    const newDoc = await getDoc(gameDoc)
+    if (newDoc.exists()){
+      console.log("Hello")
+      return
+    }else{
+      try {
+        await setDoc(doc(db, "game", code), {
+          code: code,
+          players: []
+        });
+        updateSlideID()
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
+    }
+
+  };
   
   // useEffect(() => {
   //   // Run function every 10 milliseconds
@@ -89,6 +139,11 @@ const [hasUpdated, setHasUpdated]= useState(false);
 
     return () => unsubscribe();
   }, [code]);
+
+const startGame = () => {
+  socket.emit("StartGame", {code: code, id: setID})
+}
+
 
   const endGame = async () => {
     if (window.confirm("Are you sure you want to end the game?")) {
@@ -217,7 +272,7 @@ const [hasUpdated, setHasUpdated]= useState(false);
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <motion.button
+{   gameStarted &&       <motion.button
             onClick={endGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -225,8 +280,20 @@ const [hasUpdated, setHasUpdated]= useState(false);
               font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2
               hover:bg-[#FFC300]"
           >
+            
             <FaStop /> End Game
-          </motion.button>
+          </motion.button>}
+{    !gameStarted &&      <motion.button
+            onClick={startGame}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl 
+              font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2
+              hover:bg-[#FFC300]"
+          >
+            
+            <FaStop /> Start Game
+          </motion.button>}
         </motion.div>
       </motion.div>
     </div>
