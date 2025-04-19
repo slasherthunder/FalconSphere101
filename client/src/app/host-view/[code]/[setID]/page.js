@@ -252,7 +252,7 @@ const startGame = () => {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-[#FFD700]/60 font-mono">{index + 1}</span>
-                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name} {player.slideNumber} Corrects: {player.score}</h4>
+                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name} {player.slideNumber} Corrects: {player.correctAnswers}</h4>
 
                   </div>
                 </motion.div>

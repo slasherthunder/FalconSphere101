@@ -175,6 +175,7 @@ export default function PlaySet() {
       setSelectedAnswer(""); // Reset selected answer for the next question
     } else {
       setShowResult(true); // Show result if all questions are answered
+      // router.push("/leaderboard/" + code)
     }
   };
 
