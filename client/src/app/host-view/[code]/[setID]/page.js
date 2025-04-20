@@ -17,6 +17,7 @@ export default function HostView({ params }) {
   const [error, setError] = useState(null);
   const code = use(params).code;
   const setID = useParams().setID;
+  const [isHost, setIsHost] = useState(true)
 
   const [gameStarted, setGameStarted] = useState(false)
 
@@ -25,8 +26,15 @@ export default function HostView({ params }) {
   //Retrieves Player Data from local storage
   useEffect( () =>{
     addCodeToFireBase()
-
+    ensureHost()
   }, []);
+
+  const ensureHost = async () => {
+    const docRef = doc(db, "game", code)
+    const docSnap = await getDoc(docRef)
+    const players = docSnap.data().players
+    setIsHost(!(players.some(player => player.name === sessionStorage.getItem("name"))))
+  }
 
 
 useEffect(() => {
@@ -272,7 +280,7 @@ const startGame = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-{   gameStarted &&       <motion.button
+{   gameStarted &&    isHost &&   <motion.button
             onClick={endGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -283,7 +291,7 @@ const startGame = () => {
             
             <FaStop /> End Game
           </motion.button>}
-{    !gameStarted &&      <motion.button
+{    !gameStarted &&   isHost &&    <motion.button
             onClick={startGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
