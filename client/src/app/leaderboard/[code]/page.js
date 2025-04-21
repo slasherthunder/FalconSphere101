@@ -24,34 +24,41 @@ const LeaderboardPage = () => {
   const [showDetails, setShowDetails] = useState({});
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const docRef = doc(db, "game", code);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setGameData(data);
-          const sortedPlayers = [...data.players].sort((a, b) => b.correctAnswers - a.correctAnswers);
-          setPlayers(sortedPlayers);
-          
-          // Initialize showDetails state
-          const detailsState = {};
-          sortedPlayers.forEach(player => {
-            detailsState[player.name] = false;
-          });
-          setShowDetails(detailsState);
-        } else {
-          console.log("No such game document!");
+    const interval = setInterval(() => {
+      console.log("This runs every second");
+      const fetchLeaderboard = async () => {
+        try {
+          const docRef = doc(db, "game", code);
+          const docSnap = await getDoc(docRef);
+  
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setGameData(data);
+            const sortedPlayers = [...data.players].sort((a, b) => b.correctAnswers - a.correctAnswers);
+            setPlayers(sortedPlayers);
+            
+            // Initialize showDetails state
+            const detailsState = {};
+            sortedPlayers.forEach(player => {
+              detailsState[player.name] = false;
+            });
+            setShowDetails(detailsState);
+          } else {
+            console.log("No such game document!");
+          }
+        } catch (error) {
+          console.error("Error fetching leaderboard data:", error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error fetching leaderboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
+  
+      fetchLeaderboard();
+    }, 1000); // 1000 ms = 1 second
+  
+    // Cleanup to avoid memory leaks
+    return () => clearInterval(interval);
 
-    fetchLeaderboard();
   }, [code]);
 
   const togglePlayerDetails = (playerName) => {
