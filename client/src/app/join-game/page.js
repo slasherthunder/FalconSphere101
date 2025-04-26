@@ -10,7 +10,7 @@ import { FaExclamationTriangle } from 'react-icons/fa';
 
 import { io } from 'socket.io-client';
 
-const socket = io("http://localhost:5000");
+const socket = io("http://localhost:5001");
 
 // Bad words list and filtering functions
 const badWords = [

@@ -7,7 +7,7 @@ import { FaCopy, FaRedo, FaPlay, FaTrash, FaEdit, FaCrown } from "react-icons/fa
 import { useRouter } from 'next/navigation';
 
 import {io} from "socket.io-client";
-const socket = io("http://localhost:5000");
+const socket = io("http://localhost:5001");
 
 export default function NewGame() {
   const router = useRouter();
