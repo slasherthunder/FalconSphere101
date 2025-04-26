@@ -55,7 +55,7 @@ export default function HostView({ params }) {
     const docRef = doc(db, "game", code)
     const docSnap = await getDoc(docRef)
     const isStarted = docSnap.data().isStarted
-    if(isStarted){
+    if(isStarted && !isHost){
       router.push("/study-set/play/" + setID + "/" + code)
     }
   }
@@ -197,7 +197,7 @@ const startGame = () => {
 
   const handleNextQuestion = () =>{
     // router.push("/wait-for-next-question")
-    socket.emit("SendPlayersToNextQuestion")
+    router.push("/./leaderboard/" + code)
   }
 
   useEffect (() => {
@@ -294,7 +294,7 @@ const startGame = () => {
             {(!session?.players || session.players.length === 0) && (
               <p className="text-[#FFD700]/60 text-center py-4">Waiting for players to join...</p>
             )}
-            <button onClick={handleNextQuestion}>Allow Next Question</button>
+            <button onClick={handleNextQuestion}>Go To LeaderBoard</button>
           </div>
         </motion.div>
 
