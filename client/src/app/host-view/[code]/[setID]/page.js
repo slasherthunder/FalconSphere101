@@ -17,6 +17,7 @@ export default function HostView({ params }) {
   const [error, setError] = useState(null);
   const code = use(params).code;
   const setID = useParams().setID;
+  const [isHost, setIsHost] = useState(true)
 
   const [gameStarted, setGameStarted] = useState(false)
 
@@ -25,9 +26,39 @@ export default function HostView({ params }) {
   //Retrieves Player Data from local storage
   useEffect( () =>{
     addCodeToFireBase()
-
+    ensureHost()
   }, []);
 
+  ///I HATE BROWN PEOPLE
+  const addBooleanField = async () => {
+    try {
+      const docRef = doc(db, "game", code);
+  
+      await updateDoc(docRef, {
+        isStarted: true
+      });
+  
+      console.log("Boolean field added successfully!");
+    } catch (error) {
+      console.error("Error adding boolean field:", error);
+    }
+  };
+
+  const ensureHost = async () => {
+    const docRef = doc(db, "game", code)
+    const docSnap = await getDoc(docRef)
+    const players = docSnap.data().players
+    setIsHost(!(players.some(player => player.name === sessionStorage.getItem("name"))))
+  }
+
+  const checkIfGameStarted = async () => {
+    const docRef = doc(db, "game", code)
+    const docSnap = await getDoc(docRef)
+    const isStarted = docSnap.data().isStarted
+    if(isStarted){
+      router.push("/study-set/play/" + setID + "/" + code)
+    }
+  }
 
 useEffect(() => {
   const interval = setInterval(() => {
@@ -39,6 +70,7 @@ useEffect(() => {
       setPlayerData(players)
     }
 myFunc()
+checkIfGameStarted()
   }, 1000); // 1000ms = 1 second
 
   return () => clearInterval(interval); // Cleanup on unmount
@@ -141,7 +173,8 @@ const [hasUpdated, setHasUpdated]= useState(false);
   }, [code]);
 
 const startGame = () => {
-  socket.emit("StartGame", {code: code, id: setID})
+  addBooleanField()
+  // socket.emit("StartGame", {code: code, id: setID})
 }
 
 
@@ -252,7 +285,7 @@ const startGame = () => {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-[#FFD700]/60 font-mono">{index + 1}</span>
-                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name} {player.slideNumber} Corrects: {player.score}</h4>
+                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name} {player.slideNumber} Corrects: {player.correctAnswers}</h4>
 
                   </div>
                 </motion.div>
@@ -272,7 +305,7 @@ const startGame = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-{   gameStarted &&       <motion.button
+{   gameStarted &&    isHost &&   <motion.button
             onClick={endGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -283,7 +316,7 @@ const startGame = () => {
             
             <FaStop /> End Game
           </motion.button>}
-{    !gameStarted &&      <motion.button
+{    !gameStarted &&   isHost &&    <motion.button
             onClick={startGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

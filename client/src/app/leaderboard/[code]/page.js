@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { db } from "@/components/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
+import { connect } from "socket.io-client";
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -23,34 +24,41 @@ const LeaderboardPage = () => {
   const [showDetails, setShowDetails] = useState({});
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const docRef = doc(db, "game", code);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setGameData(data);
-          const sortedPlayers = [...data.player].sort((a, b) => b.score - a.score);
-          setPlayers(sortedPlayers);
-          
-          // Initialize showDetails state
-          const detailsState = {};
-          sortedPlayers.forEach(player => {
-            detailsState[player.name] = false;
-          });
-          setShowDetails(detailsState);
-        } else {
-          console.log("No such game document!");
+    const interval = setInterval(() => {
+      console.log("This runs every second");
+      const fetchLeaderboard = async () => {
+        try {
+          const docRef = doc(db, "game", code);
+          const docSnap = await getDoc(docRef);
+  
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setGameData(data);
+            const sortedPlayers = [...data.players].sort((a, b) => b.correctAnswers - a.correctAnswers);
+            setPlayers(sortedPlayers);
+            
+            // Initialize showDetails state
+            const detailsState = {};
+            sortedPlayers.forEach(player => {
+              detailsState[player.name] = false;
+            });
+            setShowDetails(detailsState);
+          } else {
+            console.log("No such game document!");
+          }
+        } catch (error) {
+          console.error("Error fetching leaderboard data:", error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error fetching leaderboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
+  
+      fetchLeaderboard();
+    }, 1000); // 1000 ms = 1 second
+  
+    // Cleanup to avoid memory leaks
+    return () => clearInterval(interval);
 
-    fetchLeaderboard();
   }, [code]);
 
   const togglePlayerDetails = (playerName) => {
@@ -182,8 +190,8 @@ const LeaderboardPage = () => {
         <div className="space-y-4">
           {players.map((player, index) => {
             const correctAnswers = player.questionScores?.reduce((count, score) => score > 0 ? count + 1 : count, 0) || 0;
-            const totalQuestions = gameData.questions?.length || 1;
-            const accuracy = ((correctAnswers / totalQuestions) * 100).toFixed(1);
+            const totalQuestions = player.currentSlide;
+            const accuracy = ((player.correctAnswers / totalQuestions) * 100).toFixed(1);
             
             return (
               <div key={player.name} className="rounded-xl overflow-hidden shadow-md border border-[#FFD700]/30">
@@ -200,7 +208,7 @@ const LeaderboardPage = () => {
                   <div className="flex items-center gap-6">
                     <div className="text-center">
                       <span className="text-[#FFD700] text-sm block">Score</span>
-                      <span className="text-[#FFD700] text-lg md:text-xl font-bold">{player.score}</span>
+                      <span className="text-[#FFD700] text-lg md:text-xl font-bold">{player.correctAnswers}</span>
                     </div>
                     <div className="text-center hidden sm:block">
                       <span className="text-[#FFD700] text-sm block">Accuracy</span>
@@ -208,7 +216,7 @@ const LeaderboardPage = () => {
                     </div>
                     <div className="text-center hidden sm:block">
                       <span className="text-[#FFD700] text-sm block">Correct</span>
-                      <span className="text-[#FFD700] text-lg md:text-xl font-bold">{correctAnswers}/{totalQuestions}</span>
+                      <span className="text-[#FFD700] text-lg md:text-xl font-bold">{player.correctAnswers}/{totalQuestions}</span>
                     </div>
                     <div className="text-[#FFD700] text-xl">
                       {showDetails[player.name] ? '−' : '+'}

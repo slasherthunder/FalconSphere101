@@ -277,54 +277,54 @@ useEffect(() => {
           )}
         </motion.div>
 
-        {/* Players List Card */}
-        <motion.div
-          className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          <h3 className="text-[#FFD700] text-2xl font-bold mb-6">Players: {test}</h3>
-          <div className="space-y-4">
-            <AnimatePresence>
-              {players.map((player, index) => (
-                <motion.div
-                  key={player.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-gradient-to-r from-[#600000]/80 to-[#500000]/80 p-4 rounded-xl 
-                    shadow-lg border border-[#FFD700]/10 hover:border-[#FFD700]/30 transition-all duration-300
-                    flex justify-between items-center group"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[#FFD700]/60 font-mono">{index + 1}</span>
-                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name}</h4>
-                  </div>
-                  <div className="flex gap-2">
-                    <motion.button
-                      onClick={() => editPlayerName(player.id)}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className="text-[#FFD700] hover:text-[#FFC300] p-2"
-                    >
-                      <FaEdit />
-                    </motion.button>
-                    <motion.button
-                      onClick={() => removePlayer(player.id)}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className="text-[#FFD700] hover:text-red-500 p-2"
-                    >
-                      <FaTrash />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </motion.div>
+          {/* Players List Card */}
+          <motion.div
+            className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            {/* <h3 className="text-[#FFD700] text-2xl font-bold mb-6">Players: {test}</h3> */}
+            <div className="space-y-4">
+              <AnimatePresence>
+                {players.map((player, index) => (
+                  <motion.div
+                    key={player.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-gradient-to-r from-[#600000]/80 to-[#500000]/80 p-4 rounded-xl 
+                      shadow-lg border border-[#FFD700]/10 hover:border-[#FFD700]/30 transition-all duration-300
+                      flex justify-between items-center group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#FFD700]/60 font-mono">{index + 1}</span>
+                      <h4 className="text-xl text-[#FFD700] font-semibold">{player.name}</h4>
+                    </div>
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={() => editPlayerName(player.id)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="text-[#FFD700] hover:text-[#FFC300] p-2"
+                      >
+                        <FaEdit />
+                      </motion.button>
+                      <motion.button
+                        onClick={() => removePlayer(player.id)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="text-[#FFD700] hover:text-red-500 p-2"
+                      >
+                        <FaTrash />
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </motion.div>
 
         {/* Action Buttons */}
         <motion.div
