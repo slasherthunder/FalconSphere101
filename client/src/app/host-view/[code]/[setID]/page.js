@@ -29,6 +29,21 @@ export default function HostView({ params }) {
     ensureHost()
   }, []);
 
+  ///I HATE BROWN PEOPLE
+  const addBooleanField = async () => {
+    try {
+      const docRef = doc(db, "game", code);
+  
+      await updateDoc(docRef, {
+        isStarted: true
+      });
+  
+      console.log("Boolean field added successfully!");
+    } catch (error) {
+      console.error("Error adding boolean field:", error);
+    }
+  };
+
   const ensureHost = async () => {
     const docRef = doc(db, "game", code)
     const docSnap = await getDoc(docRef)
@@ -36,6 +51,14 @@ export default function HostView({ params }) {
     setIsHost(!(players.some(player => player.name === sessionStorage.getItem("name"))))
   }
 
+  const checkIfGameStarted = async () => {
+    const docRef = doc(db, "game", code)
+    const docSnap = await getDoc(docRef)
+    const isStarted = docSnap.data().isStarted
+    if(isStarted){
+      router.push("/study-set/play/" + setID + "/" + code)
+    }
+  }
 
 useEffect(() => {
   const interval = setInterval(() => {
@@ -47,6 +70,7 @@ useEffect(() => {
       setPlayerData(players)
     }
 myFunc()
+checkIfGameStarted()
   }, 1000); // 1000ms = 1 second
 
   return () => clearInterval(interval); // Cleanup on unmount
@@ -149,7 +173,8 @@ const [hasUpdated, setHasUpdated]= useState(false);
   }, [code]);
 
 const startGame = () => {
-  socket.emit("StartGame", {code: code, id: setID})
+  addBooleanField()
+  // socket.emit("StartGame", {code: code, id: setID})
 }
 
 

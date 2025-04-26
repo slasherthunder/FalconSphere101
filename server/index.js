@@ -32,7 +32,7 @@ io.on("connection", (socket) => {
     //handles changing host view information for current slide number
     socket.on("Next Slide", (slideData) =>{
         console.log("Hello")
-        socket.broadcast.emit("ChangeSlideNumber", slideData)
+        io.broadcast.emit("ChangeSlideNumber", slideData)
     });
 
 
