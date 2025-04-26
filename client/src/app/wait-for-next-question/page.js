@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { io } from "socket.io-client";
 import { FaSpinner } from "react-icons/fa";
 
-const socket = io("https://localhost:5000");
+const socket = io("https://localhost:5001");
 
 export default function Hello() {
   const router = useRouter();
