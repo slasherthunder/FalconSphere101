@@ -220,7 +220,7 @@ export default function StudySet() {
                 {currentSlide.question}
               </motion.h3>
 
-              {currentSlide.image && (
+              {currentSlide.imageData && (
                 <motion.div
                   className="relative overflow-hidden rounded-xl mb-8"
                   initial={{ opacity: 0 }}
@@ -228,7 +228,7 @@ export default function StudySet() {
                   transition={{ duration: 0.4, delay: 0.2 }}
                 >
                   <img
-                    src={currentSlide.image}
+                    src={currentSlide.imageData}
                     alt="Question"
                     className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
                   />
@@ -348,14 +348,14 @@ export default function StudySet() {
                 >
                   {currentSlide.question || "Question:"}
                 </motion.div>
-                {currentSlide.image && (
+                {currentSlide.imageData && (
                   <motion.div
                     className="relative overflow-hidden rounded-xl"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                   >
                     <img
-                      src={currentSlide.image}
+                      src={currentSlide.imageData}
                       alt="Question"
                       className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
                     />
