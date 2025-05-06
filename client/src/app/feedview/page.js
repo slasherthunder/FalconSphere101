@@ -512,7 +512,7 @@ export default function QuestionFeed() {
       {/* Header */}
       <header className="bg-[#700000] p-4 shadow-md">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl text-[#FFD700] font-bold">Peer Help</h1>
+          <h1 className="text-2xl text-[#FFD700] font-bold">Peer Help (Beta)</h1>
           <motion.input
             whileFocus={{ scale: 1.02 }}
             type="text"
