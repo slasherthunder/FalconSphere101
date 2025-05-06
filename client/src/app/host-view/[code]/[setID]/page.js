@@ -55,7 +55,9 @@ export default function HostView({ params }) {
     const docRef = doc(db, "game", code)
     const docSnap = await getDoc(docRef)
     const isStarted = docSnap.data().isStarted
-    if(isStarted && !isHost){
+    // console.log(isHost)
+    const players = docSnap.data().players
+    if(isStarted && !(!(players.some(player => player.name === sessionStorage.getItem("name"))))){
       router.push("/study-set/play/" + setID + "/" + code)
     }
   }
