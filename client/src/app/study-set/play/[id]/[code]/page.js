@@ -286,7 +286,7 @@ export default function PlaySet() {
                     transition={{ duration: 0.3 }}
                   >
                     <img
-                      src={currentSlide.imageData}
+                      src={currentSlide.image}
                       alt="Question"
                       className="w-full h-full object-cover rounded-xl shadow-lg"
                     />
