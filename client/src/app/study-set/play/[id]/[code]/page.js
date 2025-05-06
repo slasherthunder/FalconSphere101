@@ -279,7 +279,7 @@ export default function PlaySet() {
                   {currentSlide.question}
                 </motion.div>
 
-                {currentSlide.image && (
+                {currentSlide.imageData && (
                   <motion.div
                     className="relative overflow-hidden rounded-xl mb-8"
                     whileHover={{ scale: 1.02 }}
