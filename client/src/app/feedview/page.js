@@ -153,6 +153,7 @@ export default function QuestionFeed() {
   const [showReactions, setShowReactions] = useState(null);
   const [userId, setUserId] = useState("");
   const [popularTags, setPopularTags] = useState([]);
+  const [highlightedQuestionId, setHighlightedQuestionId] = useState(null);
   const questionsPerPage = 5;
   const characterLimit = 200;
 
@@ -183,6 +184,26 @@ export default function QuestionFeed() {
     
     setPopularTags(sortedPopularTags);
   }, [questions]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const questionId = params.get('question');
+    if (questionId) {
+      setHighlightedQuestionId(questionId);
+      // Scroll to the question after a short delay to ensure it's rendered
+      setTimeout(() => {
+        const element = document.getElementById(`question-${questionId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Add highlight effect
+          element.classList.add('highlight-question');
+          setTimeout(() => {
+            element.classList.remove('highlight-question');
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, []);
 
   const validateProfanity = (text) => {
     return filter.isProfane(text);
@@ -286,16 +307,64 @@ export default function QuestionFeed() {
   };
 
   const handleShare = async (question) => {
-    const shareText = `Check out this question: ${question.text}`;
+    const shareData = {
+      title: 'Shared Question from Peer Help',
+      text: question.text,
+      url: `${window.location.origin}/feedview?question=${question.id}`
+    };
+
     try {
-      await navigator.share({
-        title: "Shared Question",
-        text: shareText,
-        url: window.location.href,
-      });
+      // Try to use the Web Share API if available
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback for browsers that don't support Web Share API
+        const shareText = `${shareData.title}\n\n${shareData.text}\n\n${shareData.url}`;
+        await navigator.clipboard.writeText(shareText);
+        
+        // Show a toast notification
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 bg-[#8B0000] text-[#FFD700] px-6 py-3 rounded-xl shadow-lg z-50 opacity-0 transition-all duration-300';
+        toast.textContent = 'Link copied to clipboard!';
+        document.body.appendChild(toast);
+        
+        // Trigger reflow to enable transition
+        toast.offsetHeight;
+        toast.classList.add('opacity-100');
+        
+        // Remove the toast after 3 seconds
+        setTimeout(() => {
+          toast.classList.remove('opacity-100');
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 300);
+        }, 3000);
+      }
     } catch (error) {
-      navigator.clipboard.writeText(shareText + "\n" + window.location.href);
-      alert("Link copied to clipboard!");
+      // Don't show error for user cancellation
+      if (error.name === 'AbortError') {
+        return;
+      }
+      
+      console.error('Error sharing:', error);
+      
+      // Show error toast only for actual errors
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 right-4 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 opacity-0 transition-all duration-300';
+      toast.textContent = 'Failed to share. Please try again.';
+      document.body.appendChild(toast);
+      
+      // Trigger reflow to enable transition
+      toast.offsetHeight;
+      toast.classList.add('opacity-100');
+      
+      // Remove the error toast after 3 seconds
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 300);
+      }, 3000);
     }
   };
 
@@ -508,63 +577,75 @@ export default function QuestionFeed() {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
-    <div className="min-h-screen w-full bg-[#8B0000] py-12">
+    <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50">
+      {/* Add styles for highlight effect */}
+      <style jsx global>{`
+        @keyframes highlight-pulse {
+          0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+        }
+        .highlight-question {
+          animation: highlight-pulse 2s ease-out;
+        }
+      `}</style>
+
       {/* Header */}
-      <header className="bg-[#700000] p-4 shadow-md">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl text-[#FFD700] font-bold">Peer Help (Beta)</h1>
+      <header className="bg-gradient-to-r from-[#8B0000] to-[#A52A2A] p-6 shadow-lg">
+        <div className="max-w-5xl mx-auto flex justify-between items-center">
+          <h1 className="text-3xl text-[#FFD700] font-bold tracking-wide">Peer Help (Beta)</h1>
           <motion.input
             whileFocus={{ scale: 1.02 }}
             type="text"
             placeholder="Search questions or tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-[#600000] text-[#FFD700] p-2 rounded-lg w-64 text-center placeholder-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+            className="bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] p-3 rounded-xl w-72 text-center placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300"
           />
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto mt-8 flex">
+      <div className="max-w-5xl mx-auto py-8 px-4 flex gap-8">
         {/* Sidebar */}
-        <aside className="w-64 bg-[#700000] p-4 rounded-lg shadow-md mr-8">
-          <h2 className="text-[#FFD700] font-bold mb-4">Filters</h2>
+        <aside className="w-72 bg-gradient-to-b from-[#8B0000] to-[#A52A2A] p-6 rounded-2xl shadow-xl">
+          <h2 className="text-xl text-[#FFD700] font-bold mb-6 tracking-wide">Filters</h2>
           <motion.button
             onClick={() => setSortBy("date")}
-            whileHover={{ scale: 1.03 }}
-            className={`w-full p-2 mb-2 ${
+            whileHover={{ scale: 1.02 }}
+            className={`w-full p-3 mb-3 ${
               sortBy === "date"
-                ? "bg-[#FFD700] text-[#8B0000]"
-                : "bg-[#600000] text-[#FFD700]"
-            } rounded-lg font-bold transition duration-300`}
+                ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#700000]"
+            } rounded-xl font-bold transition-all duration-300`}
           >
             Sort by Date
           </motion.button>
           <motion.button
             onClick={() => setSortBy("votes")}
-            whileHover={{ scale: 1.03 }}
-            className={`w-full p-2 ${
+            whileHover={{ scale: 1.02 }}
+            className={`w-full p-3 ${
               sortBy === "votes"
-                ? "bg-[#FFD700] text-[#8B0000]"
-                : "bg-[#600000] text-[#FFD700]"
-            } rounded-lg font-bold transition duration-300`}
+                ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#700000]"
+            } rounded-xl font-bold transition-all duration-300`}
           >
             Sort by Votes
           </motion.button>
 
           {/* Popular Tags Section */}
-          <h3 className="text-[#FFD700] font-bold mt-6 mb-2">Popular Tags</h3>
-          <div className="space-y-2 mb-6">
+          <h3 className="text-lg text-[#FFD700] font-bold mt-8 mb-4 tracking-wide">Popular Tags</h3>
+          <div className="space-y-2 mb-8">
             {popularTags.map((tag) => (
               <motion.button
-                whileHover={{ scale: 1.03 }}
+                whileHover={{ scale: 1.02 }}
                 key={tag}
                 onClick={() => setSelectedTag(tag)}
-                className={`w-full p-2 ${
+                className={`w-full p-3 ${
                   selectedTag === tag
-                    ? "bg-[#FFD700] text-[#8B0000]"
-                    : "bg-[#600000] text-[#FFD700]"
-                } rounded-lg font-bold transition duration-300`}
+                    ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                    : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#700000]"
+                } rounded-xl font-bold transition-all duration-300`}
               >
                 {tag}
               </motion.button>
@@ -572,29 +653,29 @@ export default function QuestionFeed() {
           </div>
 
           {/* All Tags Section */}
-          <h3 className="text-[#FFD700] font-bold mt-6 mb-2">All Tags</h3>
+          <h3 className="text-lg text-[#FFD700] font-bold mt-8 mb-4 tracking-wide">All Tags</h3>
           <div className="space-y-2">
             <motion.button
               onClick={() => setSelectedTag(null)}
-              whileHover={{ scale: 1.03 }}
-              className={`w-full p-2 ${
+              whileHover={{ scale: 1.02 }}
+              className={`w-full p-3 ${
                 selectedTag === null
-                  ? "bg-[#FFD700] text-[#8B0000]"
-                  : "bg-[#600000] text-[#FFD700]"
-              } rounded-lg font-bold transition duration-300`}
+                  ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                  : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#700000]"
+              } rounded-xl font-bold transition-all duration-300`}
             >
               All Tags
             </motion.button>
             {PREDEFINED_TAGS.map((tag) => (
               <motion.button
-                whileHover={{ scale: 1.03 }}
+                whileHover={{ scale: 1.02 }}
                 key={tag}
                 onClick={() => setSelectedTag(tag)}
-                className={`w-full p-2 ${
+                className={`w-full p-3 ${
                   selectedTag === tag
-                    ? "bg-[#FFD700] text-[#8B0000]"
-                    : "bg-[#600000] text-[#FFD700]"
-                } rounded-lg font-bold transition duration-300`}
+                    ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                    : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#700000]"
+                } rounded-xl font-bold transition-all duration-300`}
               >
                 {tag}
               </motion.button>
@@ -608,33 +689,36 @@ export default function QuestionFeed() {
             {currentQuestions.map((question, index) => (
               <motion.div
                 key={question.id}
+                id={`question-${question.id}`}
                 custom={index}
                 variants={questionVariants}
                 initial="hidden"
                 animate="visible"
                 whileHover="hover"
-                className="mb-4 p-4 bg-[#600000] rounded-lg shadow-md border border-[#ffffff20]"
+                className={`mb-6 p-6 bg-gradient-to-br from-[#8B0000] to-[#A52A2A] rounded-2xl shadow-xl border border-[#ffffff10] ${
+                  highlightedQuestionId === question.id ? 'highlight-question' : ''
+                }`}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
                     {isHotQuestion(question) && (
                       <FaFire
-                        className="text-[#FF4500] text-xl"
+                        className="text-[#FF4500] text-2xl animate-pulse"
                         title="Hot Question"
                       />
                     )}
-                    <span className="text-[#FFD700] text-sm flex items-center gap-1">
+                    <span className="text-[#FFD700] text-sm flex items-center gap-2 bg-[#700000]/50 px-3 py-1 rounded-full">
                       <FaThermometerHalf className="text-sm" />
                       {question.difficulty || "medium"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <motion.button
                       onClick={() => handleShare(question)}
-                      whileHover={{ scale: 1.05 }}
-                      className="text-[#FFD700] hover:text-[#FFA500]"
+                      whileHover={{ scale: 1.1 }}
+                      className="text-[#FFD700] hover:text-[#FFA500] transition-colors duration-300"
                     >
-                      <FaShare />
+                      <FaShare className="text-xl" />
                     </motion.button>
                   </div>
                 </div>
@@ -645,21 +729,21 @@ export default function QuestionFeed() {
                     <motion.textarea
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
-                      className="bg-[#700000] text-[#FFD700] p-2 rounded-lg w-full text-center placeholder-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] resize-none"
+                      className="bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] p-4 rounded-xl w-full text-center placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] resize-none transition-all duration-300"
                       rows={4}
                     />
-                    <div className="mt-2 flex justify-end space-x-2">
+                    <div className="mt-4 flex justify-end space-x-3">
                       <motion.button
                         onClick={() => saveEdit(question.id)}
                         whileHover={{ scale: 1.05 }}
-                        className="bg-[#FFD700] text-[#8B0000] px-4 py-2 rounded-lg font-bold transition duration-300 flex items-center"
+                        className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
                       >
                         <FaSave className="mr-2" /> Save
                       </motion.button>
                       <motion.button
                         onClick={cancelEdit}
                         whileHover={{ scale: 1.05 }}
-                        className="bg-[#600000] text-[#FFD700] px-4 py-2 rounded-lg font-bold transition duration-300 flex items-center"
+                        className="bg-[#700000] text-[#FFD700] px-6 py-3 rounded-xl font-bold transition-all duration-300 flex items-center hover:bg-[#800000]"
                       >
                         <FaTimes className="mr-2" /> Cancel
                       </motion.button>
@@ -669,73 +753,72 @@ export default function QuestionFeed() {
                   // Display Mode
                   <div className="flex">
                     {/* Votes Section */}
-                    <div className="w-20 text-center flex flex-col items-center gap-3">
+                    <div className="w-24 text-center flex flex-col items-center gap-4">
                       <div className="flex flex-col items-center">
                         <motion.button
                           onClick={() => handleUpvote(question.id)}
-                          whileHover={{ scale: 1.05 }}
+                          whileHover={{ scale: 1.1 }}
                           className={`text-[#FFD700] ${
                             hasVoted(question.id, "like")
                               ? "text-[#00FF00]"
                               : "hover:text-[#00FF00]"
-                          } transition-colors duration-200 p-1`}
+                          } transition-colors duration-300 p-2`}
                         >
-                          <FaThumbsUp className="text-xl" />
+                          <FaThumbsUp className="text-2xl" />
                         </motion.button>
-                        <span className="text-[#00FF00] text-sm font-bold">
+                        <span className="text-[#00FF00] text-lg font-bold">
                           {question.likes || 0}
                         </span>
                       </div>
                       <div className="flex flex-col items-center">
                         <motion.button
                           onClick={() => handleDownvote(question.id)}
-                          whileHover={{ scale: 1.05 }}
+                          whileHover={{ scale: 1.1 }}
                           className={`text-[#FFD700] ${
                             hasVoted(question.id, "dislike")
                               ? "text-[#FF0000]"
                               : "hover:text-[#FF0000]"
-                          } transition-colors duration-200 p-1`}
+                          } transition-colors duration-300 p-2`}
                         >
-                          <FaThumbsDown className="text-xl" />
+                          <FaThumbsDown className="text-2xl" />
                         </motion.button>
-                        <span className="text-[#FF0000] text-sm font-bold">
+                        <span className="text-[#FF0000] text-lg font-bold">
                           {question.dislikes || 0}
                         </span>
                       </div>
                     </div>
 
                     {/* Question Content */}
-                    <div className="flex-1 ml-4">
-                      <p className="text-[#FFD700]">{question.text}</p>
-                      <div className="mt-2 text-[#FFD700] text-sm">
-                        Tags:{" "}
+                    <div className="flex-1 ml-6">
+                      <p className="text-[#FFD700] text-lg leading-relaxed">{question.text}</p>
+                      <div className="mt-4 text-[#FFD700] text-sm flex flex-wrap gap-2">
                         {question.tags.map((tag) => (
                           <motion.span
                             key={tag}
                             whileHover={{ scale: 1.05 }}
                             onClick={() => setSelectedTag(tag)}
-                            className="inline-block bg-[#700000] px-2 py-1 rounded-lg mr-2 cursor-pointer"
+                            className="inline-block bg-[#700000]/80 px-3 py-1.5 rounded-full cursor-pointer hover:bg-[#700000] transition-all duration-300"
                           >
                             {tag}
                           </motion.span>
                         ))}
                       </div>
 
-                      {/* Always show reply button */}
-                      <div className="mt-2 flex justify-end space-x-2">
+                      {/* Action Buttons */}
+                      <div className="mt-4 flex justify-end space-x-4">
                         {isOwner(question) && (
                           <>
                             <motion.button
                               onClick={() => handleEdit(question.id, question.text)}
                               whileHover={{ scale: 1.05 }}
-                              className="text-[#FFD700] hover:text-[#FFA500] flex items-center"
+                              className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
                             >
                               <FaEdit className="mr-2" /> Edit
                             </motion.button>
                             <motion.button
                               onClick={() => handleDelete(question.id)}
                               whileHover={{ scale: 1.05 }}
-                              className="text-[#FFD700] hover:text-[#FF0000] flex items-center"
+                              className="text-[#FFD700] hover:text-[#FF0000] flex items-center transition-colors duration-300"
                             >
                               <FaTrash className="mr-2" /> Delete
                             </motion.button>
@@ -744,32 +827,32 @@ export default function QuestionFeed() {
                         <motion.button
                           onClick={() => handleReply(question.id)}
                           whileHover={{ scale: 1.05 }}
-                          className="text-[#FFD700] hover:text-[#FFA500] flex items-center"
+                          className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
                         >
                           <FaReply className="mr-2" /> Reply
                         </motion.button>
                       </div>
 
                       {/* Reactions Section */}
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="flex flex-wrap gap-1">
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="flex flex-wrap gap-2">
                           {question.reactions &&
                             Object.entries(question.reactions).map(
                               ([reaction, count]) => (
                                 <span
                                   key={reaction}
-                                  className="bg-[#700000] px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                                  className="bg-[#700000]/80 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-[#700000] transition-all duration-300"
                                 >
-                                  {reaction === "smile" && <BsEmojiSmile />}
-                                  {reaction === "love" && <BsEmojiHeartEyes />}
-                                  {reaction === "angry" && <BsEmojiAngry />}
-                                  {reaction === "thinking" && <BsEmojiNeutral />}
-                                  {reaction === "confused" && <BsEmojiDizzy />}
-                                  {reaction === "haha" && <BsEmojiLaughing />}
-                                  {reaction === "cool" && <BsEmojiSunglasses />}
-                                  {reaction === "celebrate" && <BsStars />}
-                                  {reaction === "helpful" && <FaThumbsUp />}
-                                  <span className="ml-1">{count}</span>
+                                  {reaction === "smile" && <BsEmojiSmile className="text-lg" />}
+                                  {reaction === "love" && <BsEmojiHeartEyes className="text-lg" />}
+                                  {reaction === "angry" && <BsEmojiAngry className="text-lg" />}
+                                  {reaction === "thinking" && <BsEmojiNeutral className="text-lg" />}
+                                  {reaction === "confused" && <BsEmojiDizzy className="text-lg" />}
+                                  {reaction === "haha" && <BsEmojiLaughing className="text-lg" />}
+                                  {reaction === "cool" && <BsEmojiSunglasses className="text-lg" />}
+                                  {reaction === "celebrate" && <BsStars className="text-lg" />}
+                                  {reaction === "helpful" && <FaThumbsUp className="text-lg" />}
+                                  <span className="text-[#FFD700]">{count}</span>
                                 </span>
                               )
                             )}
@@ -780,7 +863,7 @@ export default function QuestionFeed() {
                               showReactions === question.id ? null : question.id
                             )
                           }
-                          className="text-[#FFD700] text-sm hover:text-[#FFA500]"
+                          className="text-[#FFD700] text-sm hover:text-[#FFA500] transition-colors duration-300"
                         >
                           Feelings About This
                         </motion.button>
@@ -788,71 +871,71 @@ export default function QuestionFeed() {
                           <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="flex flex-wrap gap-2 bg-[#700000] p-2 rounded-lg absolute z-10"
+                            className="flex flex-wrap gap-3 bg-[#700000]/90 backdrop-blur-sm p-4 rounded-xl absolute z-10 shadow-xl"
                           >
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "smile")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Smile"
                             >
-                              <BsEmojiSmile className="text-xl" />
+                              <BsEmojiSmile className="text-2xl" />
                             </motion.button>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "love")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Love"
                             >
-                              <BsEmojiHeartEyes className="text-xl" />
+                              <BsEmojiHeartEyes className="text-2xl" />
                             </motion.button>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "haha")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Haha"
                             >
-                              <BsEmojiLaughing className="text-xl" />
+                              <BsEmojiLaughing className="text-2xl" />
                             </motion.button>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "thinking")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Thinking"
                             >
-                              <BsEmojiNeutral className="text-xl" />
+                              <BsEmojiNeutral className="text-2xl" />
                             </motion.button>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "confused")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Confused"
                             >
-                              <BsEmojiDizzy className="text-xl" />
+                              <BsEmojiDizzy className="text-2xl" />
                             </motion.button>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "angry")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Angry"
                             >
-                              <BsEmojiAngry className="text-xl" />
+                              <BsEmojiAngry className="text-2xl" />
                             </motion.button>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "cool")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Cool"
                             >
-                              <BsEmojiSunglasses className="text-xl" />
+                              <BsEmojiSunglasses className="text-2xl" />
                             </motion.button>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               onClick={() => handleReaction(question.id, "helpful")}
-                              className="text-[#FFD700] hover:text-[#FFA500] p-1"
+                              className="text-[#FFD700] hover:text-[#FFA500] p-2 transition-colors duration-300"
                               title="Helpful"
                             >
-                              <FaThumbsUp />
+                              <FaThumbsUp className="text-2xl" />
                             </motion.button>
                           </motion.div>
                         )}
@@ -860,31 +943,31 @@ export default function QuestionFeed() {
 
                       {/* Reply Input */}
                       {replyingToId === question.id && (
-                        <div className="mt-4">
-                          <div className="bg-[#700000] rounded-lg p-2">
+                        <div className="mt-6">
+                          <div className="bg-[#700000]/80 backdrop-blur-sm rounded-xl p-4">
                             <textarea
                               placeholder="Write a reply..."
                               value={replyText}
                               onChange={(e) => setReplyText(e.target.value)}
-                              className="bg-[#600000] text-[#FFD700] p-2 rounded-lg w-full placeholder-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] resize-none"
+                              className="bg-[#700000]/50 text-[#FFD700] p-4 rounded-xl w-full placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] resize-none transition-all duration-300"
                               rows={3}
                             />
-                            <div className="mt-2 flex justify-between items-center">
-                              <span className="text-[#FFD700] text-sm">
+                            <div className="mt-4 flex justify-between items-center">
+                              <span className="text-[#FFD700]/80 text-sm">
                                 {replyText.length} characters
                               </span>
-                              <div className="flex space-x-2">
+                              <div className="flex space-x-3">
                                 <motion.button
                                   onClick={() => setReplyingToId(null)}
                                   whileHover={{ scale: 1.05 }}
-                                  className="bg-[#600000] text-[#FFD700] px-4 py-2 rounded-lg font-bold transition duration-300 flex items-center"
+                                  className="bg-[#700000] text-[#FFD700] px-6 py-2 rounded-xl font-bold transition-all duration-300 flex items-center hover:bg-[#800000]"
                                 >
                                   <FaTimes className="mr-2" /> Cancel
                                 </motion.button>
                                 <motion.button
                                   onClick={() => submitReply(question.id)}
                                   whileHover={{ scale: 1.05 }}
-                                  className="bg-[#FFD700] text-[#8B0000] px-4 py-2 rounded-lg font-bold transition duration-300 flex items-center"
+                                  className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-xl font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
                                 >
                                   <FaSave className="mr-2" /> Submit
                                 </motion.button>
@@ -893,93 +976,38 @@ export default function QuestionFeed() {
                           </div>
                         </div>
                       )}
+
                       {/* Mapping Replies */}
-                      <div className="mt-4">
+                      <div className="mt-6 space-y-4">
                         {question.replies.map((reply) => (
-                          <div key={reply.id} className="bg-[#700000] p-4 rounded-lg mb-2">
-                            <p className="text-[#FFD700]">{reply.text}</p>
+                          <div key={reply.id} className="bg-[#700000]/80 backdrop-blur-sm p-6 rounded-xl">
+                            <p className="text-[#FFD700] text-lg leading-relaxed">{reply.text}</p>
                             
                             {/* Reply Reactions */}
-                            <div className="mt-2 flex items-center gap-2">
-                              <div className="flex flex-wrap gap-1">
+                            <div className="mt-4 flex items-center gap-3">
+                              <div className="flex flex-wrap gap-2">
                                 {reply.reactions &&
                                   Object.entries(reply.reactions).map(
                                     ([reaction, count]) => (
                                       <span
                                         key={reaction}
-                                        className="bg-[#600000] px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                                        className="bg-[#700000]/50 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 hover:bg-[#700000] transition-all duration-300"
                                       >
-                                        {reaction === "smile" && <BsEmojiSmile />}
-                                        {reaction === "love" && <BsEmojiHeartEyes />}
-                                        {reaction === "angry" && <BsEmojiAngry />}
-                                        {reaction === "thinking" && <BsEmojiNeutral />}
-                                        {reaction === "confused" && <BsEmojiDizzy />}
-                                        {reaction === "haha" && <BsEmojiLaughing />}
-                                        {reaction === "cool" && <BsEmojiSunglasses />}
-                                        {reaction === "celebrate" && <BsStars />}
-                                        {reaction === "helpful" && <FaThumbsUp />}
-                                        <span className="ml-1">{count}</span>
+                                        {reaction === "smile" && <BsEmojiSmile className="text-lg" />}
+                                        {reaction === "love" && <BsEmojiHeartEyes className="text-lg" />}
+                                        {reaction === "angry" && <BsEmojiAngry className="text-lg" />}
+                                        {reaction === "thinking" && <BsEmojiNeutral className="text-lg" />}
+                                        {reaction === "confused" && <BsEmojiDizzy className="text-lg" />}
+                                        {reaction === "haha" && <BsEmojiLaughing className="text-lg" />}
+                                        {reaction === "cool" && <BsEmojiSunglasses className="text-lg" />}
+                                        {reaction === "celebrate" && <BsStars className="text-lg" />}
+                                        {reaction === "helpful" && <FaThumbsUp className="text-lg" />}
+                                        <span className="text-[#FFD700]">{count}</span>
                                       </span>
                                     )
                                   )}
                               </div>
-                              
-                              {/* Reaction Picker */}
-                              <div className="flex flex-wrap gap-1">
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  onClick={() => handleReplyReaction(question.id, reply.id, "smile")}
-                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
-                                  title="Smile"
-                                >
-                                  <BsEmojiSmile className="text-sm" />
-                                </motion.button>
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  onClick={() => handleReplyReaction(question.id, reply.id, "love")}
-                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
-                                  title="Love"
-                                >
-                                  <BsEmojiHeartEyes className="text-sm" />
-                                </motion.button>
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  onClick={() => handleReplyReaction(question.id, reply.id, "haha")}
-                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
-                                  title="Haha"
-                                >
-                                  <BsEmojiLaughing className="text-sm" />
-                                </motion.button>
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  onClick={() => handleReplyReaction(question.id, reply.id, "helpful")}
-                                  className="text-[#FFD700] hover:text-[#FFA500] p-1"
-                                  title="Helpful"
-                                >
-                                  <FaThumbsUp className="text-sm" />
-                                </motion.button>
-                              </div>
                             </div>
-
-                            {/* Reply Actions */}
-                            {isReplyOwner(reply) && (
-                              <div className="flex justify-end mt-2">
-                                <motion.button
-                                  onClick={() => handleEditReply(reply.id, question.id, reply.text)}
-                                  whileHover={{ scale: 1.05 }}
-                                  className="text-[#FFD700] hover:text-[#FFA500] flex items-center"
-                                >
-                                  <FaEdit className="mr-2" /> Edit
-                                </motion.button>
-                                <motion.button
-                                  onClick={() => handleDeleteReply(reply.id, question.id)}
-                                  whileHover={{ scale: 1.05 }}
-                                  className="text-[#FFD700] hover:text-[#FF0000] flex items-center"
-                                >
-                                  <FaTrash className="mr-2" /> Delete
-                                </motion.button>
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
@@ -993,7 +1021,7 @@ export default function QuestionFeed() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-4 flex justify-center space-x-2">
+      <div className="mt-8 flex justify-center space-x-3">
         {Array.from(
           { length: Math.ceil(filteredQuestions.length / questionsPerPage) },
           (_, i) => (
@@ -1001,11 +1029,11 @@ export default function QuestionFeed() {
               key={i + 1}
               onClick={() => paginate(i + 1)}
               whileHover={{ scale: 1.05 }}
-              className={`p-2 ${
+              className={`p-3 ${
                 currentPage === i + 1
-                  ? "bg-[#FFD700] text-[#8B0000]"
-                  : "bg-[#600000] text-[#FFD700]"
-              } rounded-lg font-bold transition duration-300`}
+                  ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                  : "bg-[#8B0000] text-[#FFD700] hover:bg-[#A52A2A]"
+              } rounded-xl font-bold transition-all duration-300`}
             >
               {i + 1}
             </motion.button>
@@ -1019,7 +1047,7 @@ export default function QuestionFeed() {
           variants={floatingButtonVariants}
           whileHover="hover"
           onClick={() => setShowQuestionForm(true)}
-          className="bg-[#FFD700] text-[#8B0000] px-6 py-4 rounded-2xl font-bold flex items-center gap-3 shadow-lg"
+          className="bg-gradient-to-r from-[#8B0000] to-[#A52A2A] text-[#FFD700] px-8 py-5 rounded-2xl font-bold flex items-center gap-4 shadow-xl hover:shadow-2xl transition-all duration-300"
         >
           <FaHandPointUp className="text-3xl" />
           I have a question
@@ -1034,38 +1062,38 @@ export default function QuestionFeed() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center"
           >
-            <motion.div className="bg-[#700000] p-8 rounded-lg shadow-lg w-full max-w-md">
-              <h2 className="text-2xl text-[#FFD700] font-bold mb-4">Ask a Question</h2>
+            <motion.div className="bg-gradient-to-br from-[#8B0000] to-[#A52A2A] p-8 rounded-2xl shadow-2xl w-full max-w-2xl">
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide">Ask a Question</h2>
               <form onSubmit={handleSubmit}>
                 <motion.textarea
                   placeholder="Ask a question..."
                   value={newQuestion}
                   onChange={(e) => setNewQuestion(e.target.value)}
                   maxLength={characterLimit}
-                  className="bg-[#600000] text-[#FFD700] p-4 rounded-lg w-full text-center placeholder-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] resize-none"
+                  className="bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] p-6 rounded-xl w-full text-center placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] resize-none transition-all duration-300"
                   rows={4}
                 />
-                <div className="text-[#FFD700] text-sm mt-2">
+                <div className="text-[#FFD700]/80 text-sm mt-2">
                   {newQuestion.length}/{characterLimit}
                 </div>
 
                 {/* Difficulty Selection */}
-                <div className="mt-4">
-                  <label className="text-[#FFD700] font-medium mb-2 block">Difficulty:</label>
-                  <div className="flex gap-2">
+                <div className="mt-6">
+                  <label className="text-[#FFD700] text-lg font-medium mb-3 block">Difficulty:</label>
+                  <div className="flex gap-3">
                     {["easy", "medium", "hard"].map((level) => (
                       <motion.button
                         key={level}
                         whileHover={{ scale: 1.03 }}
                         type="button"
                         onClick={() => setDifficulty(level)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
+                        className={`px-6 py-3 rounded-xl text-base font-medium capitalize ${
                           difficulty === level
-                            ? "bg-[#FFD700] text-[#8B0000]"
-                            : "bg-[#500000] text-[#FFD700]"
-                        }`}
+                            ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                            : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#700000]"
+                        } transition-all duration-300`}
                       >
                         {level}
                       </motion.button>
@@ -1074,13 +1102,13 @@ export default function QuestionFeed() {
                 </div>
 
                 {/* Tag Selection */}
-                <div className="mt-4">
+                <div className="mt-6">
                   <div className="flex items-center justify-between">
-                    <label className="text-[#FFD700] font-medium">Tags:</label>
+                    <label className="text-[#FFD700] text-lg font-medium">Tags:</label>
                     <button
                       type="button"
                       onClick={() => setShowTagSelector(!showTagSelector)}
-                      className="text-[#FFD700] hover:text-[#FFA500] flex items-center"
+                      className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
                     >
                       <FaTags className="mr-2" />
                       {showTagSelector ? "Hide Tags" : "Show Tags"}
@@ -1088,19 +1116,19 @@ export default function QuestionFeed() {
                   </div>
 
                   {showTagSelector && (
-                    <div className="mt-2 max-h-40 overflow-y-auto bg-[#600000] p-4 rounded-lg">
-                      <div className="flex flex-wrap gap-2">
+                    <div className="mt-4 max-h-48 overflow-y-auto bg-[#700000]/80 backdrop-blur-sm p-6 rounded-xl">
+                      <div className="flex flex-wrap gap-3">
                         {PREDEFINED_TAGS.map((tag) => (
                           <motion.button
                             key={tag}
                             type="button"
                             onClick={() => handleTagSelect(tag)}
                             whileHover={{ scale: 1.03 }}
-                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            className={`px-4 py-2 rounded-full text-sm font-medium ${
                               selectedTags.includes(tag)
-                                ? "bg-[#FFD700] text-[#8B0000]"
-                                : "bg-[#500000] text-[#FFD700]"
-                            }`}
+                                ? "bg-[#FFD700] text-[#8B0000] shadow-lg"
+                                : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#700000]"
+                            } transition-all duration-300`}
                           >
                             {tag}
                           </motion.button>
@@ -1114,11 +1142,11 @@ export default function QuestionFeed() {
                     placeholder="Add custom tags (comma-separated)"
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
-                    className="mt-2 bg-[#600000] text-[#FFD700] p-4 rounded-lg w-full text-center placeholder-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                    className="mt-4 bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] p-4 rounded-xl w-full text-center placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300"
                   />
                 </div>
 
-                <div className="mt-4 flex justify-end space-x-2">
+                <div className="mt-8 flex justify-end space-x-4">
                   <motion.button
                     type="button"
                     onClick={() => {
@@ -1127,14 +1155,14 @@ export default function QuestionFeed() {
                       setTags("");
                     }}
                     whileHover={{ scale: 1.03 }}
-                    className="bg-[#600000] text-[#FFD700] px-4 py-2 rounded-lg font-bold transition duration-300"
+                    className="bg-[#700000] text-[#FFD700] px-8 py-3 rounded-xl font-bold transition-all duration-300 hover:bg-[#800000]"
                   >
                     Cancel
                   </motion.button>
                   <motion.button
                     type="submit"
                     whileHover={{ scale: 1.03 }}
-                    className="bg-[#FFD700] text-[#8B0000] px-4 py-2 rounded-lg font-bold transition duration-300"
+                    className="bg-[#FFD700] text-[#8B0000] px-8 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     Submit
                   </motion.button>

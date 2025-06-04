@@ -138,15 +138,15 @@ export default function StudySet() {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+          className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
         >
           <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#FFD700] text-2xl font-semibold">Loading set...</p>
+          <p className="text-[#FFD700] text-2xl font-semibold tracking-wide">Loading set...</p>
         </motion.div>
       </div>
     );
@@ -154,14 +154,14 @@ export default function StudySet() {
 
   if (!setData) {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+          className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
         >
-          <p className="text-[#FFD700] text-2xl font-semibold">Set not found.</p>
+          <p className="text-[#FFD700] text-2xl font-semibold tracking-wide">Set not found.</p>
         </motion.div>
       </div>
     );
@@ -171,7 +171,7 @@ export default function StudySet() {
 
   if (isPlaying) {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -180,13 +180,13 @@ export default function StudySet() {
         >
           {showResult ? (
             <motion.div
-              className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+              className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <h2 className="text-4xl text-[#FFD700] font-bold mb-6">Quiz Completed!</h2>
-              <p className="text-2xl text-[#FFD700] mb-8">
+              <h2 className="text-4xl text-[#FFD700] font-bold mb-6 tracking-wide">Quiz Completed!</h2>
+              <p className="text-2xl text-[#FFD700] mb-8 tracking-wide">
                 Your score: {score} out of {setData.slides.length}
               </p>
               <motion.button
@@ -194,25 +194,25 @@ export default function StudySet() {
                 whileHover="hover"
                 whileTap="tap"
                 onClick={restartQuiz}
-                className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 Play Again
               </motion.button>
             </motion.div>
           ) : (
             <motion.div
-              className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20]"
+              className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20]"
               variants={cardVariants}
             >
               <div className="mb-6 flex justify-between items-center">
-                <span className="text-[#FFD700] text-xl">
+                <span className="text-[#FFD700] text-xl tracking-wide font-medium">
                   Question {currentSlideIndex + 1} of {setData.slides.length}
                 </span>
-                <span className="text-[#FFD700] text-xl">Score: {score}</span>
+                <span className="text-[#FFD700] text-xl tracking-wide font-medium">Score: {score}</span>
               </div>
 
               <motion.h3
-                className="text-3xl text-[#FFD700] font-bold mb-6"
+                className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
@@ -222,7 +222,7 @@ export default function StudySet() {
 
               {currentSlide.imageData && (
                 <motion.div
-                  className="relative overflow-hidden rounded-xl mb-8"
+                  className="relative overflow-hidden rounded-xl mb-8 shadow-xl"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, delay: 0.2 }}
@@ -230,7 +230,7 @@ export default function StudySet() {
                   <img
                     src={currentSlide.imageData}
                     alt="Question"
-                    className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
+                    className="w-full h-auto max-h-96 object-contain rounded-xl"
                   />
                 </motion.div>
               )}
@@ -242,12 +242,12 @@ export default function StudySet() {
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleAnswerSelect(option)}
-                    className={`p-6 rounded-xl text-xl font-semibold transition-all duration-300 ${
+                    className={`p-6 rounded-xl text-xl font-semibold transition-all duration-300 shadow-lg ${
                       selectedAnswer === option
                         ? option === currentSlide.correctAnswer
-                          ? "bg-green-600 text-white"
-                          : "bg-red-600 text-white"
-                        : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                          ? "bg-gradient-to-r from-green-600 to-green-700 text-white"
+                          : "bg-gradient-to-r from-red-600 to-red-700 text-white"
+                        : "bg-gradient-to-r from-[#700000] to-[#600000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
                     }`}
                     disabled={selectedAnswer !== ""}
                   >
@@ -264,7 +264,7 @@ export default function StudySet() {
                 disabled={!selectedAnswer}
                 className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-all duration-300 ${
                   selectedAnswer
-                    ? "bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300]"
+                    ? "bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] hover:shadow-xl hover:scale-105"
                     : "bg-gray-500 text-gray-300 cursor-not-allowed"
                 }`}
               >
@@ -278,7 +278,7 @@ export default function StudySet() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4">
+    <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4">
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -286,13 +286,13 @@ export default function StudySet() {
         className="max-w-7xl mx-auto"
       >
         <motion.div 
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
+          className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
           whileHover={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}
           transition={{ duration: 0.3 }}
         >
           <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
             <motion.h2 
-              className="text-5xl text-[#FFD700] font-bold"
+              className="text-5xl text-[#FFD700] font-bold tracking-wide"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -305,7 +305,7 @@ export default function StudySet() {
                 whileHover="hover"
                 whileTap="tap"
                 onClick={handleCopySet}
-                className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 Copy Set
               </motion.button>
@@ -314,7 +314,7 @@ export default function StudySet() {
                 whileHover="hover"
                 whileTap="tap"
                 onClick={startPlaying}
-                className="bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 Play Set
               </motion.button>
@@ -327,9 +327,9 @@ export default function StudySet() {
               variants={cardVariants}
               initial="hidden"
               animate="visible"
-              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+              className="w-full lg:w-1/2 p-8 bg-gradient-to-br from-[#8B0000] to-[#700000] rounded-xl shadow-xl border border-[#ffffff10]"
             >
-              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Preview</h2>
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8 tracking-wide">Preview</h2>
               <motion.div 
                 className="space-y-6"
                 initial={{ opacity: 0 }}
@@ -337,27 +337,27 @@ export default function StudySet() {
                 transition={{ delay: 0.3 }}
               >
                 <motion.div 
-                  className="text-[#FFD700] text-4xl font-semibold mb-4"
+                  className="text-[#FFD700] text-4xl font-semibold mb-4 tracking-wide"
                   whileHover={{ scale: 1.01 }}
                 >
                   {setData.title}
                 </motion.div>
                 <motion.div 
-                  className="text-[#FFD700] text-xl font-semibold"
+                  className="text-[#FFD700] text-xl font-semibold tracking-wide"
                   whileHover={{ scale: 1.01 }}
                 >
                   {currentSlide.question || "Question:"}
                 </motion.div>
                 {currentSlide.imageData && (
                   <motion.div
-                    className="relative overflow-hidden rounded-xl"
+                    className="relative overflow-hidden rounded-xl shadow-xl"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                   >
                     <img
                       src={currentSlide.imageData}
                       alt="Question"
-                      className="w-full h-auto max-h-96 object-contain rounded-xl shadow-lg"
+                      className="w-full h-auto max-h-96 object-contain rounded-xl"
                     />
                   </motion.div>
                 )}
@@ -369,9 +369,9 @@ export default function StudySet() {
                       transition={{ duration: 0.2 }}
                       className={`flex items-center p-4 rounded-xl border-2 ${
                         option === currentSlide.correctAnswer
-                          ? "border-green-500 bg-green-900/50"
-                          : "border-[#FFD700] bg-[#500000]/70"
-                      } backdrop-blur-sm shadow-lg`}
+                          ? "border-green-500 bg-gradient-to-r from-green-900/50 to-green-800/50"
+                          : "border-[#FFD700] bg-gradient-to-r from-[#700000] to-[#600000]"
+                      } shadow-lg`}
                     >
                       <span className="ml-4 text-[#FFD700] text-lg">
                         {option || `Option ${index + 1}`}
@@ -387,13 +387,13 @@ export default function StudySet() {
               variants={cardVariants}
               initial="hidden"
               animate="visible"
-              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+              className="w-full lg:w-1/2 p-8 bg-gradient-to-br from-[#8B0000] to-[#700000] rounded-xl shadow-xl border border-[#ffffff10]"
             >
-              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Slide Information</h2>
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8 tracking-wide">Slide Information</h2>
               <div className="space-y-8">
                 {/* Slide Navigation */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Slide:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Slide:</label>
                   <div className="flex flex-wrap gap-3">
                     {setData.slides.map((_, index) => (
                       <motion.button
@@ -405,8 +405,8 @@ export default function StudySet() {
                         onClick={() => setCurrentSlideIndex(index)}
                         className={`px-5 py-3 rounded-xl font-bold shadow-lg ${
                           currentSlideIndex === index
-                            ? "bg-[#FFD700] text-[#8B0000]"
-                            : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                            ? "bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000]"
+                            : "bg-gradient-to-r from-[#700000] to-[#600000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
                         } transition-all duration-300`}
                       >
                         {index + 1}
@@ -417,9 +417,9 @@ export default function StudySet() {
 
                 {/* Correct Answer */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Correct Answer:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
                   <motion.div 
-                    className="p-4 bg-[#500000]/70 backdrop-blur-sm rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg"
+                    className="p-4 bg-gradient-to-r from-[#700000] to-[#600000] rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg shadow-lg"
                     whileHover={{ scale: 1.02 }}
                   >
                     {currentSlide.correctAnswer || "No correct answer set"}
@@ -432,7 +432,7 @@ export default function StudySet() {
                   whileHover="hover"
                   whileTap="tap"
                   onClick={downloadSet}
-                  className="w-full bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300"
+                  className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                 >
                   Download Set
                 </motion.button>
