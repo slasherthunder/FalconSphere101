@@ -5,6 +5,23 @@ import { db, auth } from "../../../components/firebase"; // Import Firestore ins
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion, AnimatePresence } from "framer-motion"; // For animations
 import { onAuthStateChanged } from "firebase/auth";
+import { 
+  FaClock, 
+  FaRandom, 
+  FaBook, 
+  FaBrain, 
+  FaStopwatch, 
+  FaCheck, 
+  FaTimes, 
+  FaArrowRight,
+  FaGamepad,
+  FaRedo,
+  FaChartLine,
+  FaTrophy,
+  FaMedal,
+  FaStar,
+  FaArrowLeft
+} from "react-icons/fa";
 
 // Add animation variants
 const containerVariants = {
@@ -48,6 +65,29 @@ export default function StudySet() {
   const [showResult, setShowResult] = useState(false); // Show result after quiz ends
   const [isPlaying, setIsPlaying] = useState(false); // Track if in play mode
   const [user, setUser] = useState(null);
+  const [showStudyModes, setShowStudyModes] = useState(false);
+  const [selectedMode, setSelectedMode] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [isBreak, setIsBreak] = useState(false);
+  const [pomodoroCount, setPomodoroCount] = useState(0);
+  const [shuffledQuestions, setShuffledQuestions] = useState([]);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [studyHistory, setStudyHistory] = useState([]);
+  const [totalCorrect, setTotalCorrect] = useState(0);
+  const [totalAttempts, setTotalAttempts] = useState(0);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [roundScores, setRoundScores] = useState([]);
+  const [showStats, setShowStats] = useState(false);
+  const [bestScore, setBestScore] = useState(0);
+  const [averageScore, setAverageScore] = useState(0);
+  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
+  const [maxConsecutiveCorrect, setMaxConsecutiveCorrect] = useState(0);
+  const [studyStreak, setStudyStreak] = useState(0);
+
+  // Pomodoro timer (25 minutes)
+  const POMODORO_TIME = 25 * 60;
+  // Speed challenge time (30 seconds per question)
+  const SPEED_CHALLENGE_TIME = 30;
 
   // Fetch the set data from Firestore
   useEffect(() => {
@@ -80,23 +120,96 @@ export default function StudySet() {
     return () => unsubscribe();
   }, []);
 
-  // Handle answer selection
-  const handleAnswerSelect = (option) => {
-    setSelectedAnswer(option);
+  useEffect(() => {
+    let timer;
+    if (selectedMode && timeLeft !== null) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            if (selectedMode === "Pomodoro Study") {
+              setIsBreak(true);
+              setTimeLeft(5 * 60); // 5 minute break
+            } else if (selectedMode === "Speed Challenge") {
+              handleNextQuestion();
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [selectedMode, timeLeft]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Handle moving to the next question
-  const handleNextQuestion = () => {
-    if (selectedAnswer === setData.slides[currentSlideIndex].correctAnswer) {
-      setScore(score + 1); // Increment score if the answer is correct
-    }
+  // Handle answer selection
+  const handleAnswerSelect = (answer) => {
+    setSelectedAnswer(answer);
+  };
 
-    // Move to the next question
+  const handleReset = () => {
+    setCurrentSlideIndex(0);
+    setSelectedAnswer("");
+    setScore(0);
+    setShowResult(false);
+    setShowAnswer(false);
+    setIsBreak(false);
+    setPomodoroCount(0);
+    setTotalCorrect(0);
+    setTotalAttempts(0);
+    setCurrentRound(1);
+    setRoundScores([]);
+    setConsecutiveCorrect(0);
+    setMaxConsecutiveCorrect(0);
+    if (selectedMode === "Random Order") {
+      const shuffled = [...setData.slides].sort(() => Math.random() - 0.5);
+      setShuffledQuestions(shuffled);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    const isCorrect = selectedAnswer === (selectedMode === "Random Order" ? 
+      shuffledQuestions[currentSlideIndex].correctAnswer : 
+      setData.slides[currentSlideIndex].correctAnswer);
+
+    if (isCorrect) {
+      setScore(score + 1);
+      setTotalCorrect(prev => prev + 1);
+      setConsecutiveCorrect(prev => {
+        const newCount = prev + 1;
+        setMaxConsecutiveCorrect(current => Math.max(current, newCount));
+        return newCount;
+      });
+    } else {
+      setConsecutiveCorrect(0);
+    }
+    setTotalAttempts(prev => prev + 1);
+
     if (currentSlideIndex < setData.slides.length - 1) {
       setCurrentSlideIndex(currentSlideIndex + 1);
-      setSelectedAnswer(""); // Reset selected answer for the next question
+      setSelectedAnswer("");
+      if (selectedMode === "Speed Challenge") {
+        setTimeLeft(SPEED_CHALLENGE_TIME);
+      }
     } else {
-      setShowResult(true); // Show result if all questions are answered
+      if (selectedMode === "Pomodoro Study") {
+        setRoundScores(prev => [...prev, score]);
+        setBestScore(prev => Math.max(prev, score));
+        setAverageScore(prev => (prev * (currentRound - 1) + score) / currentRound);
+        setCurrentSlideIndex(0);
+        setSelectedAnswer("");
+        setScore(0);
+        setCurrentRound(prev => prev + 1);
+      } else {
+        setShowResult(true);
+        setBestScore(prev => Math.max(prev, score));
+      }
     }
   };
 
@@ -160,6 +273,112 @@ export default function StudySet() {
     router.push(`/edit-set/${id}`);
   };
 
+  const studyModes = [
+    {
+      title: "Pomodoro Study",
+      description: "25-minute focused study sessions with breaks",
+      icon: FaClock,
+      color: "from-[#FF6B6B] to-[#FF8E8E]",
+      gradient: "bg-gradient-to-br from-[#FF6B6B] to-[#FF8E8E]",
+    },
+    {
+      title: "Quick Quiz",
+      description: "Test your knowledge with immediate feedback",
+      icon: FaGamepad,
+      color: "from-[#4ECDC4] to-[#45B7AF]",
+      gradient: "bg-gradient-to-br from-[#4ECDC4] to-[#45B7AF]",
+    },
+    {
+      title: "Speed Challenge",
+      description: "Race against time to answer questions",
+      icon: FaStopwatch,
+      color: "from-[#FFD93D] to-[#FFC107]",
+      gradient: "bg-gradient-to-br from-[#FFD93D] to-[#FFC107]",
+    },
+    {
+      title: "Active Recall",
+      description: "Practice recalling answers from memory",
+      icon: FaBrain,
+      color: "from-[#6C5CE7] to-[#5B4BC4]",
+      gradient: "bg-gradient-to-br from-[#6C5CE7] to-[#5B4BC4]",
+    },
+    {
+      title: "Random Order",
+      description: "Questions in random sequence",
+      icon: FaRandom,
+      color: "from-[#00B894] to-[#00A884]",
+      gradient: "bg-gradient-to-br from-[#00B894] to-[#00A884]",
+    },
+    {
+      title: "Flashcards",
+      description: "Flip cards to learn and review",
+      icon: FaBook,
+      color: "from-[#FF7675] to-[#FF6B6B]",
+      gradient: "bg-gradient-to-br from-[#FF7675] to-[#FF6B6B]",
+    },
+  ];
+
+  const handlePlayClick = () => {
+    setShowStudyModes(true);
+  };
+
+  const handleModeSelect = (mode) => {
+    setShowStudyModes(false);
+    setSelectedMode(mode.title);
+    setCurrentSlideIndex(0);
+    setSelectedAnswer("");
+    setScore(0);
+    setShowResult(false);
+    setShowAnswer(false);
+    setIsBreak(false);
+    setPomodoroCount(0);
+    setTotalCorrect(0);
+    setTotalAttempts(0);
+    setCurrentRound(1);
+    setRoundScores([]);
+
+    switch (mode.title) {
+      case "Pomodoro Study":
+        setTimeLeft(POMODORO_TIME);
+        break;
+      case "Speed Challenge":
+        setTimeLeft(SPEED_CHALLENGE_TIME);
+        break;
+      case "Random Order":
+        const shuffled = [...setData.slides].sort(() => Math.random() - 0.5);
+        setShuffledQuestions(shuffled);
+        break;
+      case "Flashcards":
+        setShowAnswer(false);
+        break;
+      default:
+        break;
+    }
+    
+    startPlaying();
+  };
+
+  const handleBreakEnd = () => {
+    setIsBreak(false);
+    setPomodoroCount(prev => prev + 1);
+    if (pomodoroCount < 3) { // After 4 pomodoros, end the session
+      setTimeLeft(POMODORO_TIME);
+    } else {
+      setShowResult(true);
+    }
+  };
+
+  const toggleFlashcard = () => {
+    setShowAnswer(!showAnswer);
+  };
+
+  const getCurrentQuestion = () => {
+    if (selectedMode === "Random Order") {
+      return shuffledQuestions[currentSlideIndex];
+    }
+    return setData.slides[currentSlideIndex];
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
@@ -194,6 +413,150 @@ export default function StudySet() {
   const currentSlide = setData.slides[currentSlideIndex];
 
   if (isPlaying) {
+    const currentQuestion = getCurrentQuestion();
+
+    if (isBreak) {
+      return (
+        <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="w-full max-w-4xl"
+          >
+            <motion.div
+              className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-4xl text-[#FFD700] font-bold mb-6 tracking-wide">Break Time!</h2>
+              <p className="text-2xl text-[#FFD700] mb-4 tracking-wide">
+                Time remaining: {formatTime(timeLeft)}
+              </p>
+              <div className="mb-8">
+                <h3 className="text-2xl text-[#FFD700] font-bold mb-4">Session Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Total Correct</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{totalCorrect}/{totalAttempts}</p>
+                  </div>
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Accuracy</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{((totalCorrect / totalAttempts) * 100).toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Rounds Completed</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{currentRound - 1}</p>
+                  </div>
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Best Score</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{bestScore}/{setData.slides.length}</p>
+                  </div>
+                </div>
+                <div className="flex justify-center gap-4">
+                  <motion.button
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                    onClick={handleBreakEnd}
+                    className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                  >
+                    End Break
+                  </motion.button>
+                  <motion.button
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                    onClick={handleReset}
+                    className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E8E] text-white px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                  >
+                    <FaRedo /> Reset Set
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (showResult) {
+      return (
+        <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="w-full max-w-4xl"
+          >
+            <motion.div
+              className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-4xl text-[#FFD700] font-bold mb-6 tracking-wide">Session Complete!</h2>
+              <div className="mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Final Score</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{totalCorrect}/{totalAttempts}</p>
+                  </div>
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Accuracy</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{((totalCorrect / totalAttempts) * 100).toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Best Score</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{bestScore}/{setData.slides.length}</p>
+                  </div>
+                  <div className="bg-[#700000] p-4 rounded-xl">
+                    <p className="text-[#FFD700] text-lg mb-2">Max Streak</p>
+                    <p className="text-[#FFD700] text-2xl font-bold">{maxConsecutiveCorrect}</p>
+                  </div>
+                </div>
+                <div className="mt-6">
+                  <h3 className="text-xl text-[#FFD700] font-bold mb-4">Round Scores:</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {roundScores.map((score, index) => (
+                      <div key={index} className="bg-[#700000] p-4 rounded-xl">
+                        <p className="text-[#FFD700] text-lg">Round {index + 1}</p>
+                        <p className="text-[#FFD700] text-2xl font-bold">{score}/{setData.slides.length}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-center gap-4">
+                <motion.button
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={() => {
+                    setSelectedMode(null);
+                    setIsPlaying(false);
+                  }}
+                  className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                >
+                  Return to Set
+                </motion.button>
+                <motion.button
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={handleReset}
+                  className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E8E] text-white px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                >
+                  <FaRedo /> Reset Set
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
         <motion.div
@@ -202,100 +565,210 @@ export default function StudySet() {
           animate="visible"
           className="w-full max-w-4xl"
         >
-          {showResult ? (
-            <motion.div
-              className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h2 className="text-4xl text-[#FFD700] font-bold mb-6 tracking-wide">Quiz Completed!</h2>
-              <p className="text-2xl text-[#FFD700] mb-8 tracking-wide">
-                Your score: {score} out of {setData.slides.length}
-              </p>
+          <motion.div
+            className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20]"
+            variants={cardVariants}
+          >
+            <div className="flex justify-between items-center mb-8">
               <motion.button
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
-                onClick={restartQuiz}
-                className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                onClick={() => router.back()}
+                className="bg-[#700000] text-[#FFD700] px-6 py-3 rounded-xl font-medium text-lg hover:bg-[#FFD700] hover:text-[#8B0000] transition-all duration-200 flex items-center gap-2"
               >
-                Play Again
+                <FaArrowLeft /> Back
               </motion.button>
-            </motion.div>
-          ) : (
-            <motion.div
-              className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20]"
-              variants={cardVariants}
-            >
-              <div className="mb-6 flex justify-between items-center">
-                <span className="text-[#FFD700] text-xl tracking-wide font-medium">
-                  Question {currentSlideIndex + 1} of {setData.slides.length}
-                </span>
-                <span className="text-[#FFD700] text-xl tracking-wide font-medium">Score: {score}</span>
+
+              <div className="flex items-center gap-4">
+                {selectedMode === "Pomodoro Study" && (
+                  <div className="text-2xl font-bold text-[#FFD700]">
+                    {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+                  </div>
+                )}
+                {selectedMode === "Speed Challenge" && (
+                  <div className="text-2xl font-bold text-[#FFD700]">
+                    {timeLeft}s
+                  </div>
+                )}
+                <div className="text-xl font-medium text-[#FFD700]">
+                  Score: {score}/{currentSlideIndex + 1}
+                </div>
               </div>
+            </div>
 
-              <motion.h3
-                className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+            <div className="bg-[#8B0000] rounded-2xl p-8 mb-8">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <span className="text-[#FFD700] text-xl tracking-wide font-medium">
+                    Question {currentSlideIndex + 1} of {setData.slides.length}
+                  </span>
+                  {selectedMode === "Pomodoro Study" && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <FaClock className="text-[#FFD700]" />
+                        <span className="text-[#FFD700] text-xl tracking-wide font-medium">
+                          {formatTime(timeLeft)}
+                        </span>
+                      </div>
+                      <span className="text-[#FFD700] text-xl tracking-wide font-medium">
+                        Round {currentRound}
+                      </span>
+                    </>
+                  )}
+                  {selectedMode === "Speed Challenge" && (
+                    <div className="flex items-center gap-2">
+                      <FaClock className="text-[#FFD700]" />
+                      <span className="text-[#FFD700] text-xl tracking-wide font-medium">
+                        {formatTime(timeLeft)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-[#FFD700] text-xl tracking-wide font-medium">
+                    Score: {score}
+                  </span>
+                  {selectedMode === "Pomodoro Study" && (
+                    <span className="text-[#FFD700] text-xl tracking-wide font-medium">
+                      Total: {totalCorrect}/{totalAttempts}
+                    </span>
+                  )}
+                  {consecutiveCorrect > 0 && (
+                    <span className="text-[#FFD700] text-xl tracking-wide font-medium flex items-center gap-2">
+                      <FaStar className="text-yellow-400" /> {consecutiveCorrect}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {selectedMode === "Flashcards" ? (
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                onClick={toggleFlashcard}
+                className="cursor-pointer bg-gradient-to-br from-[#700000] to-[#600000] p-8 rounded-xl shadow-lg"
               >
-                {currentSlide.question}
-              </motion.h3>
-
-              {currentSlide.imageData && (
-                <motion.div
-                  className="relative overflow-hidden rounded-xl mb-8 shadow-xl"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
+                <motion.h3
+                  className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide text-center"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
                 >
-                  <img
-                    src={currentSlide.imageData}
-                    alt="Question"
-                    className="w-full h-auto max-h-96 object-contain rounded-xl"
-                  />
-                </motion.div>
-              )}
+                  {showAnswer ? currentQuestion.correctAnswer : currentQuestion.question}
+                </motion.h3>
+                <p className="text-[#FFD700] text-lg text-center">
+                  {showAnswer ? "Click to show question" : "Click to show answer"}
+                </p>
+              </motion.div>
+            ) : (
+              <>
+                <motion.h3
+                  className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide text-center"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  {currentQuestion.question}
+                </motion.h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {currentSlide.options.map((option, index) => (
-                  <motion.button
-                    key={index}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleAnswerSelect(option)}
-                    className={`p-6 rounded-xl text-xl font-semibold transition-all duration-300 shadow-lg ${
-                      selectedAnswer === option
-                        ? option === currentSlide.correctAnswer
-                          ? "bg-gradient-to-r from-green-600 to-green-700 text-white"
-                          : "bg-gradient-to-r from-red-600 to-red-700 text-white"
-                        : "bg-gradient-to-r from-[#700000] to-[#600000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
-                    }`}
-                    disabled={selectedAnswer !== ""}
+                {currentQuestion.imageData && (
+                  <motion.div
+                    className="relative overflow-hidden rounded-xl mb-8 shadow-xl"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.2 }}
                   >
-                    {option}
-                  </motion.button>
-                ))}
-              </div>
+                    <img
+                      src={currentQuestion.imageData}
+                      alt="Question"
+                      className="w-full h-auto max-h-96 object-contain rounded-xl"
+                    />
+                  </motion.div>
+                )}
 
+                <div className="space-y-4 mb-8">
+                  {currentQuestion.options.map((option, index) => (
+                    <motion.button
+                      key={index}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => handleAnswerSelect(option)}
+                      className={`w-full p-6 rounded-xl text-xl font-medium transition-all duration-200 ${
+                        selectedAnswer === option
+                          ? option === currentQuestion.correctAnswer
+                            ? "bg-green-600 text-white"
+                            : "bg-red-600 text-white"
+                          : "bg-[#700000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                      }`}
+                      disabled={selectedAnswer !== ""}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{option}</span>
+                        {selectedAnswer === option && (
+                          <span className="ml-4">
+                            {option === currentQuestion.correctAnswer ? (
+                              <FaCheck className="text-white text-xl" />
+                            ) : (
+                              <FaTimes className="text-white text-xl" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+
+                {selectedMode !== "Active Recall" && (
+                  <div className="flex justify-between items-center gap-4">
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      onClick={handleReset}
+                      className="bg-[#700000] text-[#FFD700] px-6 py-3 rounded-xl font-medium text-lg hover:bg-[#FFD700] hover:text-[#8B0000] transition-all duration-200 flex items-center gap-2"
+                    >
+                      <FaRedo /> Reset
+                    </motion.button>
+
+                    <motion.button
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                      onClick={handleNextQuestion}
+                      disabled={!selectedAnswer}
+                      className={`flex-1 py-4 rounded-xl font-medium text-xl transition-all duration-200 flex items-center justify-center gap-2 ${
+                        selectedAnswer
+                          ? "bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300]"
+                          : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                      }`}
+                    >
+                      {currentSlideIndex < setData.slides.length - 1 ? (
+                        <>
+                          Next Question
+                          <FaArrowRight />
+                        </>
+                      ) : (
+                        "Finish Quiz"
+                      )}
+                    </motion.button>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="flex justify-end mt-4">
               <motion.button
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
-                onClick={handleNextQuestion}
-                disabled={!selectedAnswer}
-                className={`w-full py-4 rounded-xl font-bold text-xl shadow-lg transition-all duration-300 ${
-                  selectedAnswer
-                    ? "bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] hover:shadow-xl hover:scale-105"
-                    : "bg-gray-500 text-gray-300 cursor-not-allowed"
-                }`}
+                onClick={handleReset}
+                className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E8E] text-white px-6 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2"
               >
-                {currentSlideIndex < setData.slides.length - 1 ? "Next Question" : "Finish Quiz"}
+                <FaRedo /> Reset
               </motion.button>
-            </motion.div>
-          )}
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     );
@@ -348,7 +821,7 @@ export default function StudySet() {
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
-                onClick={startPlaying}
+                onClick={handlePlayClick}
                 className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 Play Set
@@ -476,6 +949,57 @@ export default function StudySet() {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Study Modes Modal */}
+      <AnimatePresence>
+        {showStudyModes && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-br from-[#8B0000] to-[#700000] rounded-2xl shadow-2xl border border-[#ffffff20] p-8 max-w-4xl w-full"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-4xl text-[#FFD700] font-bold tracking-wide">Choose Study Mode</h2>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowStudyModes(false)}
+                  className="text-[#FFD700] hover:text-white transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </motion.button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {studyModes.map((mode, index) => (
+                  <motion.button
+                    key={mode.title}
+                    whileHover={{ scale: 1.05, y: -5 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleModeSelect(mode)}
+                    className={`${mode.gradient} p-6 rounded-xl shadow-lg border border-white/10 hover:shadow-xl transition-all duration-300`}
+                  >
+                    <div className="flex flex-col items-center text-center">
+                      <mode.icon className="text-4xl text-white mb-4" />
+                      <h3 className="text-xl font-bold text-white mb-2">{mode.title}</h3>
+                      <p className="text-white/80 text-sm">{mode.description}</p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
