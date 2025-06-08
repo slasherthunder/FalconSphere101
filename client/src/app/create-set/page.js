@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { db } from "../../components/firebase";
+import { db, auth } from "../../components/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { Filter } from "bad-words";
 import { motion } from "framer-motion";
 import { saveAs } from 'file-saver';
 import { parse } from 'papaparse';
+import { onAuthStateChanged } from "firebase/auth";
 
 const filter = new Filter();
 
@@ -73,6 +74,7 @@ export default function CreateSet() {
   const [duplicateOptions, setDuplicateOptions] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [user, setUser] = useState(null);
 
   const convertToCSV = () => {
     if (!title) {
@@ -288,6 +290,9 @@ export default function CreateSet() {
         imageData: slide.imageData || null
       })),
       createdAt: new Date().toISOString(),
+      isPublic: !!user,
+      userId: user ? user.uid : null,
+      userEmail: user ? user.email : null
     };
 
     try {
@@ -307,7 +312,7 @@ export default function CreateSet() {
       setCurrentSlideIndex(0);
       setDuplicateOptions([]);
       setError("");
-      setSuccessMessage("Set created successfully!");
+      setSuccessMessage(user ? "Set created and shared successfully!" : "Set created successfully! (Only visible to you)");
     } catch (error) {
       console.error("Error saving set: ", error);
       setError("Failed to save the set. Please try again.");
@@ -398,10 +403,23 @@ export default function CreateSet() {
   };
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const copiedSet = localStorage.getItem('copiedSet');
     if (copiedSet) {
       try {
         const setData = JSON.parse(copiedSet);
+        if (setData.userId && user && setData.userId !== user.uid) {
+          setError('You are not authorized to edit this set.');
+          localStorage.removeItem('copiedSet');
+          return;
+        }
         setTitle(setData.title);
         setSlides(setData.slides);
         localStorage.removeItem('copiedSet');
@@ -409,12 +427,12 @@ export default function CreateSet() {
         setError('Error loading copied set data');
       }
     }
-  }, []);
+  }, [user]);
 
   const currentSlide = slides[currentSlideIndex];
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4">
+    <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4">
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -422,13 +440,13 @@ export default function CreateSet() {
         className="max-w-7xl mx-auto"
       >
         <motion.div 
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
+          className="bg-gradient-to-br from-[#8B0000] to-[#A52A2A] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
           whileHover={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}
           transition={{ duration: 0.3 }}
         >
           <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
             <motion.h2 
-              className="text-5xl text-[#FFD700] font-bold"
+              className="text-5xl text-[#FFD700] font-bold tracking-wide"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -442,7 +460,7 @@ export default function CreateSet() {
                 whileTap="tap"
                 onClick={exportToCSV}
                 disabled={isExporting}
-                className="flex items-center gap-2 px-6 py-3 bg-[#FFD700] text-[#8B0000] font-bold rounded-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
               >
                 {isExporting ? (
                   <>
@@ -465,7 +483,7 @@ export default function CreateSet() {
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
-                className="flex items-center gap-2 px-6 py-3 bg-[#FFD700] text-[#8B0000] font-bold rounded-xl shadow-lg hover:bg-[#FFC300] transition-all duration-300 cursor-pointer"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -513,10 +531,10 @@ export default function CreateSet() {
               variants={previewVariants}
               initial="hidden"
               animate="visible"
-              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+              className="w-full lg:w-1/2 p-8 bg-gradient-to-br from-[#8B0000] to-[#A52A2A] rounded-xl shadow-xl border border-[#ffffff10]"
             >
               <div className="flex justify-between items-start mb-8">
-                <h2 className="text-3xl text-[#FFD700] font-bold">Preview</h2>
+                <h2 className="text-3xl text-[#FFD700] font-bold tracking-wide">Preview</h2>
                 <motion.button
                   variants={buttonVariants}
                   whileHover={{ 
@@ -527,7 +545,7 @@ export default function CreateSet() {
                   whileTap={{ scale: 0.95 }}
                   type="button"
                   onClick={() => handleDeleteSlide(currentSlideIndex)}
-                  className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-[#600000] border border-[#FFD700]/30 hover:border-[#FF0000] transition-all duration-300"
+                  className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-[#700000] border border-[#FFD700]/30 hover:border-[#FF0000] transition-all duration-300"
                   title="Delete this slide"
                 >
                   <svg 
@@ -557,13 +575,13 @@ export default function CreateSet() {
                 transition={{ delay: 0.3 }}
               >
                 <motion.div 
-                  className="text-[#FFD700] text-4xl font-semibold mb-4"
+                  className="text-[#FFD700] text-4xl font-semibold mb-4 tracking-wide"
                   whileHover={{ scale: 1.01 }}
                 >
                   {title || "Name of Set"}
                 </motion.div>
                 <motion.div 
-                  className="text-[#FFD700] text-xl font-semibold"
+                  className="text-[#FFD700] text-xl font-semibold tracking-wide"
                   whileHover={{ scale: 1.01 }}
                 >
                   {currentSlide.question || "Question:"}
@@ -604,8 +622,8 @@ export default function CreateSet() {
                       className={`flex items-center p-4 rounded-xl border-2 ${
                         duplicateOptions.includes(index)
                           ? "border-red-500 bg-red-900/50"
-                          : "border-[#FFD700] bg-[#500000]/70"
-                      } backdrop-blur-sm shadow-lg`}
+                          : "border-[#FFD700] bg-[#700000]"
+                      } shadow-lg backdrop-blur-sm`}
                     >
                       <input
                         type="radio"
@@ -629,19 +647,19 @@ export default function CreateSet() {
               variants={formVariants}
               initial="hidden"
               animate="visible"
-              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+              className="w-full lg:w-1/2 p-8 bg-gradient-to-br from-[#8B0000] to-[#A52A2A] rounded-xl shadow-xl border border-[#ffffff10]"
             >
-              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Edit Set</h2>
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8 tracking-wide">Edit Set</h2>
               <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Set Title */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Title:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Title:</label>
                   <motion.input
                     whileFocus={{ scale: 1.02 }}
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
                     placeholder="Enter title"
                     required
                   />
@@ -649,7 +667,7 @@ export default function CreateSet() {
 
                 {/* Slide Navigation */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Slide:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Slide:</label>
                   <div className="flex flex-wrap gap-2">
                     {slides.map((_, index) => (
                       <motion.button
@@ -661,8 +679,8 @@ export default function CreateSet() {
                         onClick={() => setCurrentSlideIndex(index)}
                         className={`px-4 py-2 rounded-lg font-bold shadow-lg ${
                           currentSlideIndex === index
-                            ? "bg-[#FFD700] text-[#8B0000]"
-                            : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                            ? "bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000]"
+                            : "bg-[#700000]/80 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
                         } transition-all duration-300`}
                       >
                         {index + 1}
@@ -674,7 +692,7 @@ export default function CreateSet() {
                       whileTap="tap"
                       type="button"
                       onClick={handleAddSlide}
-                      className="flex items-center gap-1 px-4 py-2 rounded-lg font-bold bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition-all duration-300 shadow-lg"
+                      className="flex items-center gap-1 px-4 py-2 rounded-lg font-bold bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] hover:shadow-xl transition-all duration-300 shadow-lg"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -686,13 +704,13 @@ export default function CreateSet() {
 
                 {/* Question */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Question:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Question:</label>
                   <motion.input
                     whileFocus={{ scale: 1.02 }}
                     type="text"
                     value={currentSlide.question}
                     onChange={(e) => handleQuestionChange(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
                     placeholder="Enter your question"
                     required
                   />
@@ -700,10 +718,10 @@ export default function CreateSet() {
 
                 {/* Image */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Image:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Image:</label>
                   <motion.label
                     whileHover={{ scale: 1.01 }}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 flex flex-col items-center justify-center gap-2 cursor-pointer border-dashed border-[#FFD700]/50 hover:border-solid"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 flex flex-col items-center justify-center gap-2 cursor-pointer border-dashed border-[#FFD700]/50 hover:border-solid"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#FFD700]/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -730,7 +748,7 @@ export default function CreateSet() {
 
                 {/* Options */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Options:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Options:</label>
                   <div className="space-y-3">
                     {currentSlide.options.map((option, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -739,7 +757,7 @@ export default function CreateSet() {
                           type="text"
                           value={option}
                           onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className={`flex-1 p-3 border-2 rounded-lg bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 ${
+                          className={`flex-1 p-3 border-2 rounded-lg bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 ${
                             duplicateOptions.includes(index) ? "border-red-500" : "border-[#FFD700]"
                           }`}
                           placeholder={`Option ${index + 1}`}
@@ -751,7 +769,7 @@ export default function CreateSet() {
                           whileTap="tap"
                           type="button"
                           onClick={() => handleRemoveOption(index)}
-                          className="bg-red-600/90 text-white w-10 h-10 rounded-lg hover:bg-red-700 transition-all duration-300 shadow-lg flex items-center justify-center"
+                          className="bg-red-600/90 backdrop-blur-sm text-white w-10 h-10 rounded-lg hover:bg-red-700 transition-all duration-300 shadow-lg flex items-center justify-center"
                         >
                           ×
                         </motion.button>
@@ -763,7 +781,7 @@ export default function CreateSet() {
                       whileTap="tap"
                       type="button"
                       onClick={handleAddOption}
-                      className="bg-[#FFD700] text-[#8B0000] px-5 py-2 rounded-lg font-bold hover:bg-[#FFC300] transition-all duration-300 shadow-lg flex items-center gap-2 justify-center"
+                      className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-5 py-2 rounded-lg font-bold hover:shadow-xl transition-all duration-300 shadow-lg flex items-center gap-2 justify-center"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -775,12 +793,12 @@ export default function CreateSet() {
 
                 {/* Correct Answer */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Correct Answer:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
                   <motion.select
                     whileFocus={{ scale: 1.02 }}
                     value={currentSlide.correctAnswer}
                     onChange={(e) => handleCorrectAnswerChange(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
                     required
                   >
                     <option value="">Select correct answer</option>
@@ -798,7 +816,7 @@ export default function CreateSet() {
                   whileHover="hover"
                   whileTap="tap"
                   type="submit"
-                  className="w-full bg-[#FFD700] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl hover:bg-[#FFC300] transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl hover:shadow-xl transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />

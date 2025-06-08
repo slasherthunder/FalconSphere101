@@ -249,12 +249,12 @@ export default function EditSet() {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen w-full bg-white py-12 px-4 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
+          className="bg-[#8B0000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
         >
           <div className="w-16 h-16 border-4 border-[#FFD700] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-[#FFD700] text-2xl font-semibold">Loading set...</p>
@@ -264,7 +264,7 @@ export default function EditSet() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#8B0000] to-[#600000] py-12 px-4">
+    <div className="min-h-screen w-full bg-white py-12 px-4">
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -272,13 +272,13 @@ export default function EditSet() {
         className="max-w-7xl mx-auto"
       >
         <motion.div 
-          className="bg-[#700000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
+          className="bg-[#8B0000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] overflow-hidden"
           whileHover={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}
           transition={{ duration: 0.3 }}
         >
           <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
             <motion.h2 
-              className="text-5xl text-[#FFD700] font-bold"
+              className="text-5xl text-[#FFD700] font-bold tracking-wide"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -319,10 +319,10 @@ export default function EditSet() {
               variants={cardVariants}
               initial="hidden"
               animate="visible"
-              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+              className="w-full lg:w-1/2 p-8 bg-[#8B0000] rounded-xl shadow-xl border border-[#ffffff10]"
             >
               <div className="flex justify-between items-start mb-8">
-                <h2 className="text-3xl text-[#FFD700] font-bold">Preview</h2>
+                <h2 className="text-3xl text-[#FFD700] font-bold tracking-wide">Preview</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-[#FFD700] text-lg">
                     Slide {currentSlideIndex + 1} of {slides.length}
@@ -337,13 +337,13 @@ export default function EditSet() {
                 transition={{ delay: 0.3 }}
               >
                 <motion.div 
-                  className="text-[#FFD700] text-4xl font-semibold mb-4"
+                  className="text-[#FFD700] text-4xl font-semibold mb-4 tracking-wide"
                   whileHover={{ scale: 1.01 }}
                 >
                   {title || "Name of Set"}
                 </motion.div>
                 <motion.div 
-                  className="text-[#FFD700] text-xl font-semibold"
+                  className="text-[#FFD700] text-xl font-semibold tracking-wide"
                   whileHover={{ scale: 1.01 }}
                 >
                   {currentSlide.question || "Question:"}
@@ -379,7 +379,7 @@ export default function EditSet() {
                       className={`flex items-center p-4 rounded-xl border-2 ${
                         option === currentSlide.correctAnswer
                           ? "border-green-500 bg-green-900/50"
-                          : "border-[#FFD700] bg-[#500000]/70"
+                          : "border-[#FFD700] bg-[#700000]"
                       } backdrop-blur-sm shadow-lg`}
                     >
                       <input
@@ -404,26 +404,26 @@ export default function EditSet() {
               variants={cardVariants}
               initial="hidden"
               animate="visible"
-              className="w-full lg:w-1/2 p-8 bg-[#600000]/90 backdrop-blur-sm rounded-xl shadow-xl border border-[#ffffff10]"
+              className="w-full lg:w-1/2 p-8 bg-[#8B0000] rounded-xl shadow-xl border border-[#ffffff10]"
             >
-              <h2 className="text-3xl text-[#FFD700] font-bold mb-8">Edit Set</h2>
+              <h2 className="text-3xl text-[#FFD700] font-bold mb-8 tracking-wide">Edit Set</h2>
               <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
                 {/* Set Title */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Title:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Title:</label>
                   <motion.input
                     whileFocus={{ scale: 1.02 }}
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
                     placeholder="Enter title"
                   />
                 </div>
 
                 {/* Slide Navigation */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Slide:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Slide:</label>
                   <div className="flex flex-wrap gap-3">
                     {slides.map((_, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export default function EditSet() {
                           className={`px-5 py-3 rounded-xl font-bold shadow-lg ${
                             currentSlideIndex === index
                               ? "bg-[#FFD700] text-[#8B0000]"
-                              : "bg-[#500000]/70 text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                              : "bg-[#700000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
                           } transition-all duration-300`}
                         >
                           {index + 1}
@@ -468,31 +468,31 @@ export default function EditSet() {
 
                 {/* Question */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Question:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Question:</label>
                   <motion.input
                     whileFocus={{ scale: 1.02 }}
                     type="text"
                     value={currentSlide.question}
                     onChange={(e) => handleQuestionChange(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
                     placeholder="Enter your question"
                   />
                 </div>
 
                 {/* Image */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Image:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Image:</label>
                   <motion.input
                     whileFocus={{ scale: 1.02 }}
                     type="file"
                     onChange={handleImageChange}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#FFD700] file:text-[#8B0000] hover:file:bg-[#FFC300]"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#FFD700] file:text-[#8B0000] hover:file:bg-[#FFC300]"
                   />
                 </div>
 
                 {/* Options */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Options:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Options:</label>
                   <div className="space-y-3">
                     {currentSlide.options.map((option, index) => (
                       <div key={index} className="flex items-center gap-3">
@@ -501,7 +501,7 @@ export default function EditSet() {
                           type="text"
                           value={option}
                           onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className="flex-1 p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] placeholder-[#FFD70080] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                          className="flex-1 p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
                           placeholder={`Enter a possible answer`}
                         />
                         <motion.button
@@ -531,12 +531,12 @@ export default function EditSet() {
 
                 {/* Correct Answer */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3">Correct Answer:</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
                   <motion.select
                     whileFocus={{ scale: 1.02 }}
                     value={currentSlide.correctAnswer}
                     onChange={(e) => handleCorrectAnswerChange(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#500000]/70 text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
                   >
                     <option value="">Select correct answer</option>
                     {currentSlide.options.map((option, index) => (

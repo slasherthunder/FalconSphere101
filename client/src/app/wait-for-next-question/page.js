@@ -40,9 +40,9 @@ export default function Hello() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-[#8B0000] flex items-center justify-center">
+    <div className="min-h-screen w-full bg-white flex items-center justify-center">
       <motion.div 
-        className="bg-[#700000] p-8 rounded-lg shadow-lg text-center max-w-md w-full"
+        className="bg-[#8B0000] p-8 rounded-lg shadow-lg text-center max-w-md w-full"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -67,7 +67,7 @@ export default function Hello() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-lg font-bold"
+            className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-lg font-bold hover:bg-[#F3B13B] transition-colors duration-300"
           >
             Practice Mode
           </motion.button>
@@ -75,7 +75,7 @@ export default function Hello() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-[#600000] text-[#FFD700] px-6 py-2 rounded-lg font-bold border border-[#FFD700]"
+            className="bg-[#700000] text-[#FFD700] px-6 py-2 rounded-lg font-bold border border-[#FFD700] hover:bg-[#600000] transition-colors duration-300"
           >
             Exit Game
           </motion.button>
