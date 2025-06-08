@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db } from "../../../components/firebase"; // Import Firestore instance
+import { db, auth } from "../../../components/firebase"; // Import Firestore instance and auth
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion, AnimatePresence } from "framer-motion"; // For animations
+import { onAuthStateChanged } from "firebase/auth";
 
 // Add animation variants
 const containerVariants = {
@@ -46,6 +47,7 @@ export default function StudySet() {
   const [score, setScore] = useState(0); // Track user's score
   const [showResult, setShowResult] = useState(false); // Show result after quiz ends
   const [isPlaying, setIsPlaying] = useState(false); // Track if in play mode
+  const [user, setUser] = useState(null);
 
   // Fetch the set data from Firestore
   useEffect(() => {
@@ -69,6 +71,14 @@ export default function StudySet() {
 
     fetchSetData();
   }, [id]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Handle answer selection
   const handleAnswerSelect = (option) => {
@@ -134,6 +144,20 @@ export default function StudySet() {
     }));
     // Navigate to create page
     router.push('/create-set');
+  };
+
+  const handleEditSet = () => {
+    if (!user) {
+      router.push('/signup');
+      return;
+    }
+    
+    if (setData.userId !== user.uid) {
+      alert("You can only edit sets that you created.");
+      return;
+    }
+    
+    router.push(`/edit-set/${id}`);
   };
 
   if (loading) {
@@ -300,6 +324,17 @@ export default function StudySet() {
               Study Set: {setData.title}
             </motion.h2>
             <div className="flex flex-col sm:flex-row gap-4 mt-4 sm:mt-0">
+              {user && setData.userId === user.uid && (
+                <motion.button
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  onClick={handleEditSet}
+                  className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                >
+                  Edit Set
+                </motion.button>
+              )}
               <motion.button
                 variants={buttonVariants}
                 whileHover="hover"

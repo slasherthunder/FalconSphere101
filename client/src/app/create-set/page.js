@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { db } from "../../components/firebase";
+import { db, auth } from "../../components/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { Filter } from "bad-words";
 import { motion } from "framer-motion";
 import { saveAs } from 'file-saver';
 import { parse } from 'papaparse';
+import { onAuthStateChanged } from "firebase/auth";
 
 const filter = new Filter();
 
@@ -73,6 +74,7 @@ export default function CreateSet() {
   const [duplicateOptions, setDuplicateOptions] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [user, setUser] = useState(null);
 
   const convertToCSV = () => {
     if (!title) {
@@ -288,6 +290,9 @@ export default function CreateSet() {
         imageData: slide.imageData || null
       })),
       createdAt: new Date().toISOString(),
+      isPublic: !!user,
+      userId: user ? user.uid : null,
+      userEmail: user ? user.email : null
     };
 
     try {
@@ -307,7 +312,7 @@ export default function CreateSet() {
       setCurrentSlideIndex(0);
       setDuplicateOptions([]);
       setError("");
-      setSuccessMessage("Set created successfully!");
+      setSuccessMessage(user ? "Set created and shared successfully!" : "Set created successfully! (Only visible to you)");
     } catch (error) {
       console.error("Error saving set: ", error);
       setError("Failed to save the set. Please try again.");
@@ -398,10 +403,23 @@ export default function CreateSet() {
   };
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const copiedSet = localStorage.getItem('copiedSet');
     if (copiedSet) {
       try {
         const setData = JSON.parse(copiedSet);
+        if (setData.userId && user && setData.userId !== user.uid) {
+          setError('You are not authorized to edit this set.');
+          localStorage.removeItem('copiedSet');
+          return;
+        }
         setTitle(setData.title);
         setSlides(setData.slides);
         localStorage.removeItem('copiedSet');
@@ -409,7 +427,7 @@ export default function CreateSet() {
         setError('Error loading copied set data');
       }
     }
-  }, []);
+  }, [user]);
 
   const currentSlide = slides[currentSlideIndex];
 

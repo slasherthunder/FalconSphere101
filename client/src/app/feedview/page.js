@@ -15,6 +15,7 @@ import {
   FaThermometerHalf,
   FaThumbsUp,
   FaThumbsDown,
+  FaSignInAlt,
 } from "react-icons/fa";
 import {
   BsEmojiSmile,
@@ -26,7 +27,7 @@ import {
   BsEmojiSunglasses,
   BsStars,
 } from "react-icons/bs";
-import { db } from "../../components/firebase";
+import { db, auth } from "../../components/firebase";
 import {
   collection,
   addDoc,
@@ -36,6 +37,8 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { Filter } from "bad-words";
+import Link from "next/link";
+import { onAuthStateChanged } from "firebase/auth";
 
 const filter = new Filter();
 const PREDEFINED_TAGS = [
@@ -156,6 +159,7 @@ export default function QuestionFeed() {
   const [highlightedQuestionId, setHighlightedQuestionId] = useState(null);
   const questionsPerPage = 5;
   const characterLimit = 200;
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     setUserId(getUserId());
@@ -203,6 +207,14 @@ export default function QuestionFeed() {
         }
       }, 500);
     }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const validateProfanity = (text) => {
@@ -457,6 +469,26 @@ export default function QuestionFeed() {
   };
 
   const handleReply = (id) => {
+    if (!user) {
+      // Show a toast notification to sign in
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 right-4 bg-[#8B0000] text-[#FFD700] px-6 py-3 rounded-xl shadow-lg z-50 opacity-0 transition-all duration-300';
+      toast.textContent = 'Please sign in to reply to questions';
+      document.body.appendChild(toast);
+      
+      // Trigger reflow to enable transition
+      toast.offsetHeight;
+      toast.classList.add('opacity-100');
+      
+      // Remove the toast after 3 seconds
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 300);
+      }, 3000);
+      return;
+    }
     setReplyingToId(id);
   };
 
@@ -824,13 +856,15 @@ export default function QuestionFeed() {
                             </motion.button>
                           </>
                         )}
-                        <motion.button
-                          onClick={() => handleReply(question.id)}
-                          whileHover={{ scale: 1.05 }}
-                          className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
-                        >
-                          <FaReply className="mr-2" /> Reply
-                        </motion.button>
+                        {user && (
+                          <motion.button
+                            onClick={() => handleReply(question.id)}
+                            whileHover={{ scale: 1.05 }}
+                            className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
+                          >
+                            <FaReply className="mr-2" /> Reply
+                          </motion.button>
+                        )}
                       </div>
 
                       {/* Reactions Section */}
@@ -946,11 +980,12 @@ export default function QuestionFeed() {
                         <div className="mt-6">
                           <div className="bg-[#700000]/80 backdrop-blur-sm rounded-xl p-4">
                             <textarea
-                              placeholder="Write a reply..."
+                              placeholder={user ? "Write a reply..." : "Please sign in to reply"}
                               value={replyText}
                               onChange={(e) => setReplyText(e.target.value)}
                               className="bg-[#700000]/50 text-[#FFD700] p-4 rounded-xl w-full placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] resize-none transition-all duration-300"
                               rows={3}
+                              disabled={!user}
                             />
                             <div className="mt-4 flex justify-between items-center">
                               <span className="text-[#FFD700]/80 text-sm">
@@ -964,13 +999,24 @@ export default function QuestionFeed() {
                                 >
                                   <FaTimes className="mr-2" /> Cancel
                                 </motion.button>
-                                <motion.button
-                                  onClick={() => submitReply(question.id)}
-                                  whileHover={{ scale: 1.05 }}
-                                  className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-xl font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
-                                >
-                                  <FaSave className="mr-2" /> Submit
-                                </motion.button>
+                                {user ? (
+                                  <motion.button
+                                    onClick={() => submitReply(question.id)}
+                                    whileHover={{ scale: 1.05 }}
+                                    className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-xl font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
+                                  >
+                                    <FaSave className="mr-2" /> Submit
+                                  </motion.button>
+                                ) : (
+                                  <Link href="/signup">
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-xl font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
+                                    >
+                                      <FaSignInAlt className="mr-2" /> Sign In to Reply
+                                    </motion.button>
+                                  </Link>
+                                )}
                               </div>
                             </div>
                           </div>
