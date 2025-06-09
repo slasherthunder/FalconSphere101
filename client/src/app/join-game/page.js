@@ -206,34 +206,36 @@ const updatePlayers = async (code, newPlayers) => {
   // }, [players]);
 
   return (
-    <div className="min-h-screen w-full bg-[#8B0000] py-12 flex items-center justify-center">
+    <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 flex items-center justify-center">
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-[#700000] backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-4xl mx-4 text-center transform transition-all hover:scale-105 duration-300 border border-[#ffffff20]"
+        className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 sm:p-12 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 text-center transform transition-all hover:scale-[1.02] duration-300 border border-[#FFD700]/20"
       >
-        <h1 className="text-4xl text-[#FFD700] font-bold mb-8">Join A Game</h1>
+        <h1 className="text-4xl sm:text-5xl text-[#FFD700] font-bold mb-8 tracking-wide">
+          Join A Game
+        </h1>
 
         {/* Session Code Input */}
-        <div className="mb-6">
+        <div className="mb-8">
           <motion.input
             type="text"
             placeholder="Enter Session Code"
             value={sessionCode}
             onChange={handleSessionCodeChange}
-            className="bg-[#600000] text-[#FFD700] p-4 rounded-lg w-full max-w-xs text-center placeholder-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition transform hover:scale-105"
+            className="bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] p-4 rounded-xl w-full max-w-xs text-center placeholder-[#FFD700]/70 focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300 hover:bg-[#700000] shadow-lg"
           />
         </div>
 
         {/* Player Name Input */}
-        <div className="mb-6 relative">
+        <div className="mb-8 relative">
           <motion.input
             type="text"
             placeholder="Enter Your Name"
             value={playerName}
             onChange={handlePlayerNameChange}
-            className={`bg-[#600000] text-[#FFD700] p-4 rounded-lg w-full max-w-xs text-center placeholder-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition transform hover:scale-105 ${
+            className={`bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] p-4 rounded-xl w-full max-w-xs text-center placeholder-[#FFD700]/70 focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300 hover:bg-[#700000] shadow-lg ${
               error && error.includes('inappropriate') ? 'ring-2 ring-red-500' : ''
             }`}
           />
@@ -241,7 +243,7 @@ const updatePlayers = async (code, newPlayers) => {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#FFD700]"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#FFD700]"
             >
               <div className="animate-spin h-5 w-5 border-2 border-[#FFD700] rounded-full border-t-transparent"/>
             </motion.div>
@@ -254,24 +256,28 @@ const updatePlayers = async (code, newPlayers) => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex items-center justify-center gap-2 text-[#FF5252] mb-4"
+            className="flex items-center justify-center gap-2 text-[#FF5252] mb-6 bg-red-500/10 p-3 rounded-lg"
           >
-            <FaExclamationTriangle />
-            <span>{error}</span>
+            <FaExclamationTriangle className="text-lg" />
+            <span className="font-medium">{error}</span>
           </motion.div>
         )}
 
         {/* Join Game Button */}
         <motion.button
           onClick={joinGame}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           disabled={isValidating || error}
-          className={`bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-lg font-bold transition duration-300
-            ${(isValidating || error) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#FFC300]'}`}
+          className={`bg-gradient-to-r from-[#FFD700] to-[#F3B13B] text-[#8B0000] px-8 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl
+            ${(isValidating || error) ? 'opacity-50 cursor-not-allowed' : 'hover:from-[#F3B13B] hover:to-[#FFD700]'}`}
         >
           Join Game
         </motion.button>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent opacity-50"></div>
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent opacity-50"></div>
       </motion.div>
     </div>
   );
