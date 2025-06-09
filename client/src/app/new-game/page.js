@@ -133,7 +133,7 @@ export default function NewGame() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#8B0000] via-[#700000] to-[#600000] py-12 px-4">
+    <div className="min-h-screen w-full bg-gradient-to-b from-white via-gray-50 to-gray-100 py-12 px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -142,25 +142,27 @@ export default function NewGame() {
       >
         {/* Session Code Card */}
         <motion.div
-          className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
-          whileHover={{ scale: 1.02 }}
+          className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 sm:p-10 rounded-3xl shadow-2xl mb-8 border border-[#FFD700]/20 relative overflow-hidden"
+          whileHover={{ scale: 1.01 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FFD700]/5 to-transparent opacity-50"></div>
+          <div className="relative flex flex-col sm:flex-row justify-between items-center gap-6">
             <div className="text-center sm:text-left">
-              <h3 className="text-[#FFD700]/80 text-lg mb-2">SESSION CODE</h3>
-              <h2 className="text-5xl font-bold text-[#FFD700] tracking-wider font-mono">
+              <h3 className="text-[#FFD700]/80 text-lg mb-3 tracking-wider uppercase font-medium">Session Code</h3>
+              <h2 className="text-5xl sm:text-6xl font-bold text-[#FFD700] tracking-wider font-mono bg-[#700000]/30 px-6 py-3 rounded-xl">
                 {sessionCode}
               </h2>
             </div>
             <motion.button
               onClick={copyToClipboard}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-6 py-3 rounded-xl 
-                font-bold shadow-lg hover:shadow-xl flex items-center gap-2 transition-all duration-300"
+              className="bg-gradient-to-r from-[#FFD700] to-[#F3B13B] text-[#8B0000] px-8 py-4 rounded-xl 
+                font-bold shadow-lg hover:shadow-xl flex items-center gap-3 transition-all duration-300
+                hover:from-[#F3B13B] hover:to-[#FFD700]"
             >
-              <FaCopy /> Copy Code
+              <FaCopy className="text-lg" /> Copy Code
             </motion.button>
           </div>
           <AnimatePresence>
@@ -169,7 +171,7 @@ export default function NewGame() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="text-[#FFD700]/80 text-sm mt-2"
+                className="text-[#FFD700]/90 text-sm mt-4 font-medium"
               >
                 Code copied to clipboard!
               </motion.p>
@@ -179,112 +181,120 @@ export default function NewGame() {
 
         {/* Set Selection Card */}
         <motion.div
-          className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
+          className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 sm:p-10 rounded-3xl shadow-2xl mb-8 border border-[#FFD700]/20 relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <h3 className="text-[#FFD700] text-2xl font-bold mb-4">Select a Study Set</h3>
-          <select
-            onChange={(e) => handleSetSelection(e.target.value)}
-            className="w-full p-4 rounded-xl bg-[#500000] text-[#FFD700] border border-[#FFD700]/20 
-              focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300
-              hover:border-[#FFD700]/40"
-          >
-            <option value="">Choose a set</option>
-            {availableSets.map((set) => (
-              <option key={set.id} value={set.id}>
-                {set.title}
-              </option>
-            ))}
-          </select>
-          {selectedSet && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 p-4 bg-[#500000]/50 rounded-xl border border-[#FFD700]/20"
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FFD700]/5 to-transparent opacity-50"></div>
+          <div className="relative">
+            <h3 className="text-[#FFD700] text-2xl font-bold mb-6 tracking-wide">Select a Study Set</h3>
+            <select
+              onChange={(e) => handleSetSelection(e.target.value)}
+              className="w-full p-4 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] border border-[#FFD700]/20 
+                focus:outline-none focus:ring-2 focus:ring-[#FFD700] transition-all duration-300
+                hover:border-[#FFD700]/40 shadow-lg text-lg"
             >
-              <div className="flex items-center gap-2 text-[#FFD700]">
-                <FaCrown className="text-xl" />
-                <p className="font-semibold">{selectedSet.title}</p>
-              </div>
-            </motion.div>
-          )}
+              <option value="">Choose a set</option>
+              {availableSets.map((set) => (
+                <option key={set.id} value={set.id}>
+                  {set.title}
+                </option>
+              ))}
+            </select>
+            {selectedSet && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 p-5 bg-[#700000]/80 backdrop-blur-sm rounded-xl border border-[#FFD700]/20 shadow-lg"
+              >
+                <div className="flex items-center gap-3 text-[#FFD700]">
+                  <FaCrown className="text-2xl text-[#F3B13B]" />
+                  <p className="font-semibold text-lg">{selectedSet.title}</p>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </motion.div>
 
         {/* Players List Card */}
         <motion.div
-          className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
+          className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 sm:p-10 rounded-3xl shadow-2xl mb-8 border border-[#FFD700]/20 relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <h3 className="text-[#FFD700] text-2xl font-bold mb-6">Players</h3>
-          <div className="space-y-4">
-            <AnimatePresence>
-              {players.map((player, index) => (
-                <motion.div
-                  key={player.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-gradient-to-r from-[#600000]/80 to-[#500000]/80 p-4 rounded-xl 
-                    shadow-lg border border-[#FFD700]/10 hover:border-[#FFD700]/30 transition-all duration-300
-                    flex justify-between items-center group"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-[#FFD700]/60 font-mono">{index + 1}</span>
-                    <h4 className="text-xl text-[#FFD700] font-semibold">{player.name}</h4>
-                  </div>
-                  <div className="flex gap-2">
-                    <motion.button
-                      onClick={() => editPlayerName(player.id)}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className="text-[#FFD700] hover:text-[#FFC300] p-2"
-                    >
-                      <FaEdit />
-                    </motion.button>
-                    <motion.button
-                      onClick={() => removePlayer(player.id)}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className="text-[#FFD700] hover:text-red-500 p-2"
-                    >
-                      <FaTrash />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FFD700]/5 to-transparent opacity-50"></div>
+          <div className="relative">
+            <h3 className="text-[#FFD700] text-2xl font-bold mb-6 tracking-wide">Players</h3>
+            <div className="space-y-4">
+              <AnimatePresence>
+                {players.map((player, index) => (
+                  <motion.div
+                    key={player.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-[#700000]/80 backdrop-blur-sm p-5 rounded-xl 
+                      shadow-lg border border-[#FFD700]/10 hover:border-[#FFD700]/30 transition-all duration-300
+                      flex justify-between items-center group hover:bg-[#700000]/90"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="text-[#FFD700]/60 font-mono text-lg bg-[#600000] px-3 py-1 rounded-lg">{index + 1}</span>
+                      <h4 className="text-xl text-[#FFD700] font-semibold">{player.name}</h4>
+                    </div>
+                    <div className="flex gap-3">
+                      <motion.button
+                        onClick={() => editPlayerName(player.id)}
+                        whileHover={{ scale: 1.1, y: -2 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="text-[#FFD700] hover:text-[#F3B13B] p-2 transition-all duration-300 bg-[#600000]/50 rounded-lg"
+                      >
+                        <FaEdit className="text-lg" />
+                      </motion.button>
+                      <motion.button
+                        onClick={() => removePlayer(player.id)}
+                        whileHover={{ scale: 1.1, y: -2 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="text-[#FFD700] hover:text-red-500 p-2 transition-all duration-300 bg-[#600000]/50 rounded-lg"
+                      >
+                        <FaTrash className="text-lg" />
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
         </motion.div>
 
         {/* Action Buttons */}
         <motion.div
-          className="flex flex-col sm:flex-row justify-center gap-4"
+          className="flex flex-col sm:flex-row justify-center gap-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
         >
           <motion.button
             onClick={resetSession}
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-6 py-4 rounded-xl 
-              font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            className="bg-gradient-to-r from-[#FFD700] to-[#F3B13B] text-[#8B0000] px-8 py-4 rounded-xl 
+              font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-3 transition-all duration-300
+              hover:from-[#F3B13B] hover:to-[#FFD700] text-lg"
           >
-            <FaRedo /> Reset Session
+            <FaRedo className="text-xl" /> Reset Session
           </motion.button>
           <motion.button
             onClick={startGame}
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-8 py-4 rounded-xl 
-              font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            className="bg-gradient-to-r from-[#FFD700] to-[#F3B13B] text-[#8B0000] px-10 py-4 rounded-xl 
+              font-bold shadow-lg hover:shadow-xl flex items-center justify-center gap-3 transition-all duration-300
+              hover:from-[#F3B13B] hover:to-[#FFD700] text-lg"
           >
-            <FaPlay /> Start Game
+            <FaPlay className="text-xl" /> Start Game
           </motion.button>
         </motion.div>
       </motion.div>
