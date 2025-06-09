@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "../components/firebase";
+import { db, auth } from "../components/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { FaEdit, FaGamepad, FaUsers, FaLightbulb, FaQuoteLeft } from "react-icons/fa";
+import { onAuthStateChanged } from "firebase/auth";
 
 import { GetUserID } from "./getID";
 
@@ -16,6 +17,7 @@ export default function Home() {
   const [recentSearches, setRecentSearches] = useState([]);
   const [userSets, setUserSets] = useState([]);
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
+  const [user, setUser] = useState(null);
 
   const learningQuotes = [
     {
@@ -64,7 +66,9 @@ export default function Home() {
       try {
         const querySnapshot = await getDocs(collection(db, "sets"));
         const sets = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setPopularSets(sets);
+        // Only show public sets in popular sets
+        const publicSets = sets.filter(set => set.isPublic);
+        setPopularSets(publicSets);
 
         if (typeof window !== "undefined") {
           const storedUserSets = JSON.parse(localStorage.getItem("userSets")) || [];
@@ -95,6 +99,14 @@ export default function Home() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const addToRecentSearches = (set) => {
     setRecentSearches((prevSearches) => {
       const updatedSearches = prevSearches.filter((s) => s.id !== set.id);
@@ -110,6 +122,18 @@ export default function Home() {
   };
 
   const handleEditSet = (set) => {
+    if (!user) {
+      // If user is not logged in, redirect to sign in
+      router.push('/signup');
+      return;
+    }
+    
+    if (set.userId !== user.uid) {
+      // If user is not the creator, show error
+      alert("You can only edit sets that you created.");
+      return;
+    }
+    
     router.push(`/edit-set/${set.id}`);
   };
 
@@ -165,7 +189,7 @@ export default function Home() {
       {/* Study Sets Grid */}
       <section className="container mx-auto px-6 mb-16 w-full">
         <h2 className="text-3xl font-bold text-[#8B0000] text-center mb-8">
-          Popular Study Sets
+          Tutor Made Study Sets
         </h2>
         
         <div className="mb-8 text-center">
@@ -235,7 +259,7 @@ export default function Home() {
       {/* User's Recent Sets Section */}
       <section className="container mx-auto px-6 mb-16 w-full">
         <h2 className="text-3xl font-bold text-[#8B0000] text-center mb-8">
-          Your Recent Sets
+          Sets You've Created
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center">
           {userSets.length ? (
@@ -251,19 +275,31 @@ export default function Home() {
                 <p className="text-[#F3B13B]/90 mb-6 text-lg">
                   A collection of flashcards for mastering your subject.
                 </p>
-                <button
-                  onClick={() => handleEditSet(set)}
-                  className="w-full bg-gradient-to-r from-[#8B0000] to-[#600000] text-[#F3B13B] px-6 py-3 
-                  rounded-xl font-semibold hover:from-[#F3B13B] hover:to-[#FFD700] hover:text-[#8B0000] 
-                  transition-all duration-300 shadow-md"
-                >
-                  Edit Set
-                </button>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => navigateTo(`/study-set/${set.id}`, set)}
+                    className="flex-1 bg-gradient-to-r from-[#8B0000] to-[#600000] text-[#F3B13B] px-6 py-3 
+                    rounded-xl font-semibold hover:from-[#F3B13B] hover:to-[#FFD700] hover:text-[#8B0000] 
+                    transition-all duration-300 shadow-md"
+                  >
+                    View Set
+                  </button>
+                  {user && set.userId === user.uid && (
+                    <button
+                      onClick={() => handleEditSet(set)}
+                      className="flex-1 bg-gradient-to-r from-[#8B0000] to-[#600000] text-[#F3B13B] px-6 py-3 
+                      rounded-xl font-semibold hover:from-[#F3B13B] hover:to-[#FFD700] hover:text-[#8B0000] 
+                      transition-all duration-300 shadow-md"
+                    >
+                      Edit Set
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           ) : (
             <p className="font-bold text-[#8B0000] text-center text-xl">
-              No recent sets found.
+              None of your sets were found.
             </p>
           )}
         </div>
