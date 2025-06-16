@@ -74,6 +74,7 @@ export default function CreateSet() {
   const [duplicateOptions, setDuplicateOptions] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   const [user, setUser] = useState(null);
 
   const convertToCSV = () => {
@@ -290,7 +291,7 @@ export default function CreateSet() {
         imageData: slide.imageData || null
       })),
       createdAt: new Date().toISOString(),
-      isPublic: !!user,
+      isPublic: user ? isPublic : false,
       userId: user ? user.uid : null,
       userEmail: user ? user.email : null
     };
@@ -312,7 +313,9 @@ export default function CreateSet() {
       setCurrentSlideIndex(0);
       setDuplicateOptions([]);
       setError("");
-      setSuccessMessage(user ? "Set created and shared successfully!" : "Set created successfully! (Only visible to you)");
+      setSuccessMessage(user ? 
+        (isPublic ? "Set created and shared publicly!" : "Set created and saved privately!") : 
+        "Set created successfully! (Only visible to you)");
     } catch (error) {
       console.error("Error saving set: ", error);
       setError("Failed to save the set. Please try again.");
@@ -664,6 +667,34 @@ export default function CreateSet() {
                     required
                   />
                 </div>
+
+                {/* Public/Private Toggle - Only show for logged-in users */}
+                {user && (
+                  <div className="flex items-center justify-between p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm border-[#FFD700]">
+                    <label className="text-[#FFD700] text-lg font-medium tracking-wide">Visibility:</label>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[#FFD700] ${!isPublic ? 'opacity-100' : 'opacity-50'}`}>Private</span>
+                      <motion.button
+                        type="button"
+                        onClick={() => setIsPublic(!isPublic)}
+                        className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${
+                          isPublic ? 'bg-[#FFD700]' : 'bg-[#700000]'
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <motion.div
+                          className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full"
+                          animate={{
+                            x: isPublic ? 28 : 0,
+                            transition: { type: "spring", stiffness: 500, damping: 30 }
+                          }}
+                        />
+                      </motion.button>
+                      <span className={`text-[#FFD700] ${isPublic ? 'opacity-100' : 'opacity-50'}`}>Public</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Slide Navigation */}
                 <div>
