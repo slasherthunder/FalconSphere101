@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db, auth } from "../components/firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { FaEdit, FaGamepad, FaUsers, FaLightbulb, FaQuoteLeft } from "react-icons/fa";
+import { FaEdit, FaGamepad, FaUsers, FaLightbulb, FaQuoteLeft, FaRobot } from "react-icons/fa";
 import { onAuthStateChanged } from "firebase/auth";
 
 import { GetUserID } from "./getID";
@@ -170,7 +170,8 @@ export default function Home() {
             { label: "Create Your First Set", path: "/create-set", icon: FaEdit },
             { label: "New Game", path: `/dynamic-page/new-test/${ID}`, icon: FaGamepad },
             { label: "Join A Game", path: "/join-game", icon: FaUsers },
-            { label: "Peer Help", path: "/feedview", icon: FaLightbulb }
+            { label: "Peer Help", path: "/feedview", icon: FaLightbulb },
+            { label: "FalconAI", path: "/ai-integration", icon: FaRobot }
           ].map(({ label, path, icon: Icon }) => (
             <button
               key={`nav-button-${path}`}
