@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaSignInAlt, FaLock, FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaSignInAlt, FaIdCard, FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../components/firebase";
@@ -48,7 +48,7 @@ export default function SignIn() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
-    password: "",
+    studentId: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -72,7 +72,7 @@ export default function SignIn() {
 
     try {
       // Sign in with Firebase using email and password
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      await signInWithEmailAndPassword(auth, formData.email, formData.studentId);
       
       // Redirect to home page on successful sign in
       router.push("/");
@@ -202,7 +202,7 @@ export default function SignIn() {
             {showForgotPassword ? (
               <form onSubmit={handleForgotPassword} className="space-y-6">
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Email</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">School Email</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <FaEnvelope className="text-[#FFD700]/70" />
@@ -214,7 +214,7 @@ export default function SignIn() {
                       onChange={(e) => setResetEmail(e.target.value)}
                       required
                       className="w-full pl-10 pr-3 py-3 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
-                      placeholder="Enter your email"
+                      placeholder="Enter your school email"
                     />
                   </div>
                 </div>
@@ -245,7 +245,7 @@ export default function SignIn() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Email</label>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">School Email</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <FaEnvelope className="text-[#FFD700]/70" />
@@ -258,35 +258,35 @@ export default function SignIn() {
                       value={formData.email}
                       onChange={handleChange}
                       className="w-full pl-10 pr-3 py-3 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
-                      placeholder="Enter your email"
+                      placeholder="Enter your school email"
                     />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <label className="block text-[#FFD700] text-lg font-medium tracking-wide">Password</label>
+                    <label className="block text-[#FFD700] text-lg font-medium tracking-wide">Student ID</label>
                     <button
                       type="button"
                       onClick={() => setShowForgotPassword(true)}
                       className="text-[#FFD700]/80 hover:text-[#FFD700] text-sm transition-colors duration-200"
                     >
-                      Forgot Password?
+                      Forgot Student ID?
                     </button>
                   </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FaLock className="text-[#FFD700]/70" />
+                      <FaIdCard className="text-[#FFD700]/70" />
                     </div>
                     <motion.input
                       whileFocus={{ scale: 1.02 }}
                       type={showPassword ? "text" : "password"}
-                      name="password"
+                      name="studentId"
                       required
-                      value={formData.password}
+                      value={formData.studentId}
                       onChange={handleChange}
                       className="w-full pl-10 pr-12 py-3 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
-                      placeholder="Enter your password"
+                      placeholder="Enter your student ID"
                     />
                     <button
                       type="button"
@@ -321,6 +321,30 @@ export default function SignIn() {
                     </span>
                   )}
                 </motion.button>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#FFD700]/20"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-gradient-to-br from-[#8B0000] to-[#A52A2A] text-[#FFD700]/80">or</span>
+                  </div>
+                </div>
+
+                <motion.a
+                  href="https://docs.google.com/forms/d/1ALrU7NJ23mb58njndnHuO0MLcf0EzzW7ka47c0vstBc/edit"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                  className="w-full bg-[#700000] text-[#FFD700] px-8 py-4 rounded-xl font-bold text-xl hover:bg-[#FFD700] hover:text-[#8B0000] transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Join Us as a Tutor
+                </motion.a>
               </form>
             )}
           </motion.div>
