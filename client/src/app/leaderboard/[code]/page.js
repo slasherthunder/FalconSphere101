@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { db } from "@/components/firebase";
+import { db } from "@/app/components/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { connect } from "socket.io-client";

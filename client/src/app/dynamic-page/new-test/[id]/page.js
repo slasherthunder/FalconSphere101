@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { db } from "@/components/firebase";
+import { db } from "@/app/components/firebase";
 import { collection, getDocs, doc, setDoc, addDoc , getDoc, updateDoc} from "firebase/firestore";
 import { FaCopy, FaRedo, FaPlay, FaTrash, FaEdit, FaCrown } from "react-icons/fa";
 import { useRouter } from 'next/navigation';

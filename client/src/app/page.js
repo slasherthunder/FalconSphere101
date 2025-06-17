@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db, auth } from "../components/firebase";
+import { db, auth } from "./components/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { FaEdit, FaGamepad, FaUsers, FaLightbulb, FaQuoteLeft, FaRobot } from "react-icons/fa";
 import { onAuthStateChanged } from "firebase/auth";

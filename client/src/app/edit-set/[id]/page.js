@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db } from "../../../components/firebase";
+import { db } from "../../components/firebase";
 import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { Filter } from "bad-words";
 import { motion, AnimatePresence } from "framer-motion";
