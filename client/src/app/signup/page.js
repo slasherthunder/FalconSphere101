@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { FaSignInAlt, FaIdCard, FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../../components/firebase";
+import { auth } from "../components/firebase";
 
 // Animation variants
 const containerVariants = {

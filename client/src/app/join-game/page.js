@@ -1,5 +1,5 @@
 "use client";
-import { db } from '@/components/firebase';
+import { db } from '@/app/components/firebase';
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
 import { ref, set, push } from "firebase/database";
 

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { db } from "../../components/firebase";
+import { db } from "../components/firebase";
 import { doc, onSnapshot, updateDoc, arrayRemove } from "firebase/firestore";
 import { FaCrown, FaSignOutAlt } from "react-icons/fa";
 

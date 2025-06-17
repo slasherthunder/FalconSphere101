@@ -27,7 +27,7 @@ import {
   BsEmojiSunglasses,
   BsStars,
 } from "react-icons/bs";
-import { db, auth } from "../../components/firebase";
+import { db, auth } from "../components/firebase";
 import {
   collection,
   addDoc,

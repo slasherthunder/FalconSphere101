@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db, auth } from "../../../components/firebase"; // Import Firestore instance and auth
+import { db, auth } from "../../components/firebase"; // Import Firestore instance and auth
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion, AnimatePresence } from "framer-motion"; // For animations
 import { onAuthStateChanged } from "firebase/auth";

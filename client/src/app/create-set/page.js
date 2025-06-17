@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { db, auth } from "../../components/firebase";
+import { db, auth } from "../components/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { Filter } from "bad-words";
 import { motion } from "framer-motion";
