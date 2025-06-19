@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp, FaBook, FaGraduationCap, FaLightbulb } from 'react-icons/fa';
 
 const CoursePage = () => {
     const [expandedUnits, setExpandedUnits] = useState({});
@@ -117,98 +117,126 @@ const CoursePage = () => {
     const hasSelectedTools = Object.values(selectedTools).some(tool => tool);
 
     return (
-        <div className="min-h-screen bg-gray-100 py-8">
-            <div className="container mx-auto px-4 max-w-4xl">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-10">
+            <div className="container mx-auto px-5 max-w-5xl">
                 {/* Main Cardinal Red Square Container */}
-                <div className="bg-[#8B0000] rounded-lg shadow-xl p-8">
-                    {/* Course Name */}
-                    <h1 className="text-4xl font-bold text-[#F3B13B] text-center mb-8">
-                        {courseData.name}
-                    </h1>
+                <div className="bg-gradient-to-br from-[#8B0000] to-[#A52A2A] rounded-2xl shadow-2xl p-10 border border-[#F3B13B]/20">
+                    {/* Course Header with Icon */}
+                    <div className="text-center mb-12">
+                        <div className="inline-flex items-center justify-center w-24 h-24 bg-[#F3B13B] rounded-full mb-6 shadow-lg">
+                            <FaBook className="text-4xl text-[#8B0000]" />
+                        </div>
+                        <h1 className="text-6xl font-bold text-[#F3B13B] mb-4 drop-shadow-lg">
+                            {courseData.name}
+                        </h1>
+                        <div className="w-28 h-1.5 bg-[#F3B13B] mx-auto rounded-full"></div>
+                    </div>
 
                     {/* Description Section */}
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-semibold text-[#F3B13B] text-center mb-4">
-                            Description:
-                        </h2>
-                        <p className="text-[#F3B13B] text-lg leading-relaxed text-center">
+                    <div className="mb-12 bg-[#600000]/50 rounded-xl p-8 border border-[#F3B13B]/20">
+                        <div className="flex items-center justify-center mb-4">
+                            <FaLightbulb className="text-[#F3B13B] text-3xl mr-3" />
+                            <h2 className="text-4xl font-semibold text-[#F3B13B]">
+                                Description
+                            </h2>
+                        </div>
+                        <p className="text-[#F3B13B] text-xl leading-relaxed text-center max-w-4xl mx-auto">
                             {courseData.description}
                         </p>
                     </div>
 
                     {/* Units Section */}
                     <div className="mb-8">
-                        <h2 className="text-2xl font-semibold text-[#F3B13B] text-center mb-6">
-                            Units
-                        </h2>
+                        <div className="flex items-center justify-center mb-10">
+                            <FaGraduationCap className="text-[#F3B13B] text-4xl mr-4" />
+                            <h2 className="text-5xl font-bold text-[#F3B13B]">
+                                Course Units
+                            </h2>
+                        </div>
                         
                         {/* Unit Boxes */}
-                        <div className="space-y-4">
-                            {courseData.units.map((unit) => (
-                                <div key={unit.id} className="bg-[#8B0000] rounded-lg shadow-md overflow-hidden border border-[#F3B13B]/20">
+                        <div className="space-y-6">
+                            {courseData.units.map((unit, index) => (
+                                <div 
+                                    key={unit.id} 
+                                    className="bg-gradient-to-r from-[#8B0000] to-[#A52A2A] rounded-xl shadow-xl overflow-hidden border border-[#F3B13B]/30 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]"
+                                    style={{ animationDelay: `${index * 100}ms` }}
+                                >
                                     {/* Main Unit Box */}
-                                    <div className="p-4 flex items-center justify-between">
-                                        <div className="flex items-center space-x-4">
+                                    <div className="p-6 flex items-center justify-between bg-gradient-to-r from-[#8B0000]/80 to-[#A52A2A]/80">
+                                        <div className="flex items-center space-x-6">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedUnits[unit.id]}
                                                 onChange={() => toggleUnitSelection(unit.id)}
-                                                className="w-5 h-5 text-[#F3B13B] border-[#F3B13B] rounded focus:ring-[#F3B13B]"
+                                                className="w-8 h-8 text-[#8B0000] border-2 border-[#F3B13B] rounded-md focus:ring-2 focus:ring-[#F3B13B] focus:ring-offset-2 focus:ring-offset-[#8B0000] transition-all duration-200 bg-[#F3B13B] checked:bg-[#FFD700] checked:border-[#FFD700]"
                                             />
-                                            <span className="text-lg font-medium text-[#F3B13B]">
-                                                Unit {unit.id}: {unit.name}
-                                            </span>
+                                            <div>
+                                                <span className="text-2xl font-bold text-[#F3B13B]">
+                                                    Unit {unit.id}: {unit.name}
+                                                </span>
+                                                <div className="w-20 h-0.5 bg-[#F3B13B] mt-2 rounded-full"></div>
+                                            </div>
                                         </div>
                                         <button
                                             onClick={() => toggleUnitExpansion(unit.id)}
-                                            className="text-[#F3B13B] hover:text-[#FFD700] transition-colors"
+                                            className="text-[#F3B13B] hover:text-[#FFD700] transition-all duration-300 transform hover:scale-110 p-2 rounded-full hover:bg-[#F3B13B]/10"
                                         >
                                             {expandedUnits[unit.id] ? (
-                                                <FaChevronUp className="w-5 h-5" />
+                                                <FaChevronUp className="w-6 h-6" />
                                             ) : (
-                                                <FaChevronDown className="w-5 h-5" />
+                                                <FaChevronDown className="w-6 h-6" />
                                             )}
                                         </button>
                                     </div>
 
                                     {/* Expanded Content */}
                                     {expandedUnits[unit.id] && (
-                                        <div className="border-t border-[#F3B13B]/20 p-4 bg-[#600000]">
-                                            <h3 className="text-lg font-semibold text-[#F3B13B] mb-3">
-                                                What Is Covered?
-                                            </h3>
-                                            <p className="text-[#F3B13B]/90 mb-6">
-                                                {unit.description}
-                                            </p>
-                                            
-                                            <h4 className="text-lg font-semibold text-[#F3B13B] text-center mb-4">
-                                                Choose your difficulty:
-                                            </h4>
-                                            
-                                            <div className="max-w-xs mx-auto mb-4">
-                                                <select
-                                                    value={difficulties[unit.id] || ''}
-                                                    onChange={(e) => handleDifficultyChange(unit.id, e.target.value)}
-                                                    className="w-full p-3 border border-[#F3B13B] rounded-lg focus:ring-2 focus:ring-[#F3B13B] focus:border-[#F3B13B] bg-[#8B0000] text-[#F3B13B]"
-                                                >
-                                                    <option value="">Select difficulty...</option>
-                                                    <option value="easy">Easy</option>
-                                                    <option value="medium">Medium</option>
-                                                    <option value="hard">Hard</option>
-                                                </select>
-                                            </div>
-                                            
-                                            <p className="text-sm text-[#F3B13B]/80 text-center mb-4">
-                                                Note: Medium models the typical rigor based on the district curriculum, and is best used for review. It is recommended to start there, scale down to Easy if you need a refresher, or up it to Hard for more practice and solidify the skills.
-                                            </p>
-                                            
-                                            <div className="text-center">
-                                                <button
-                                                    onClick={() => setShowGenerateModal(true)}
-                                                    className="bg-[#F3B13B] text-[#8B0000] px-6 py-3 rounded-lg hover:bg-[#FFD700] transition-colors font-medium"
-                                                >
-                                                    Generate Studying Tools
-                                                </button>
+                                        <div className="border-t border-[#F3B13B]/20 p-8 bg-gradient-to-br from-[#600000] to-[#8B0000]">
+                                            <div className="max-w-4xl mx-auto">
+                                                <div className="bg-[#8B0000]/50 rounded-xl p-6 mb-6 border border-[#F3B13B]/20">
+                                                    <h3 className="text-3xl font-bold text-[#F3B13B] mb-4 flex items-center">
+                                                        <FaLightbulb className="mr-3 text-[#F3B13B]" />
+                                                        What Is Covered?
+                                                    </h3>
+                                                    <p className="text-[#F3B13B]/95 text-xl leading-relaxed">
+                                                        {unit.description}
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="text-center mb-8">
+                                                    <h4 className="text-3xl font-bold text-[#F3B13B] mb-6">
+                                                        Choose Your Difficulty Level
+                                                    </h4>
+                                                    
+                                                    <div className="max-w-md mx-auto mb-6">
+                                                        <select
+                                                            value={difficulties[unit.id] || ''}
+                                                            onChange={(e) => handleDifficultyChange(unit.id, e.target.value)}
+                                                            className="w-full p-4 border-2 border-[#F3B13B] rounded-xl focus:ring-4 focus:ring-[#F3B13B]/30 focus:border-[#F3B13B] bg-[#8B0000] text-[#F3B13B] text-lg font-medium shadow-lg"
+                                                        >
+                                                            <option value="">Select difficulty...</option>
+                                                            <option value="easy">Easy</option>
+                                                            <option value="medium">Medium</option>
+                                                            <option value="hard">Hard</option>
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div className="bg-[#8B0000]/50 rounded-xl p-4 border border-[#F3B13B]/20">
+                                                        <p className="text-[#F3B13B]/90 text-base leading-relaxed">
+                                                            <span className="font-semibold">Note:</span> Medium models the typical rigor based on the district curriculum, and is best used for review. It is recommended to start there, scale down to Easy if you need a refresher, or up it to Hard for more practice and solidify the skills.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="text-center">
+                                                    <button
+                                                        onClick={() => setShowGenerateModal(true)}
+                                                        className="bg-gradient-to-r from-[#F3B13B] to-[#FFD700] text-[#8B0000] px-10 py-4 rounded-xl hover:from-[#FFD700] hover:to-[#F3B13B] transition-all duration-300 font-bold text-xl shadow-lg transform hover:scale-105"
+                                                    >
+                                                        Generate Studying Tools
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -221,82 +249,71 @@ const CoursePage = () => {
 
             {/* Generate Modal */}
             {showGenerateModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-10 max-w-xl w-full mx-5 shadow-2xl border border-gray-200">
                         {!isGenerating ? (
                             <>
-                                <h3 className="text-xl font-semibold text-gray-800 mb-6">
-                                    What would you like to generate? (Select all that apply)
-                                </h3>
+                                <div className="text-center mb-8">
+                                    <div className="inline-flex items-center justify-center w-20 h-20 bg-[#8B0000] rounded-full mb-4">
+                                        <FaBook className="text-3xl text-[#F3B13B]" />
+                                    </div>
+                                    <h3 className="text-3xl font-bold text-gray-800 mb-2">
+                                        Generate Study Materials
+                                    </h3>
+                                    <p className="text-lg text-gray-600">Select all that apply</p>
+                                </div>
                                 
-                                <div className="space-y-3 mb-6">
-                                    <label className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedTools.studyGuide}
-                                            onChange={() => toggleToolSelection('studyGuide')}
-                                            className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                                        />
-                                        <span className="text-gray-700">Study guide</span>
-                                    </label>
-                                    
-                                    <label className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedTools.practiceQuestions}
-                                            onChange={() => toggleToolSelection('practiceQuestions')}
-                                            className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                                        />
-                                        <span className="text-gray-700">Practice questions (with answers)</span>
-                                    </label>
-                                    
-                                    <label className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedTools.practiceTest}
-                                            onChange={() => toggleToolSelection('practiceTest')}
-                                            className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                                        />
-                                        <span className="text-gray-700">Practice test</span>
-                                    </label>
-                                    
-                                    <label className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedTools.studySet}
-                                            onChange={() => toggleToolSelection('studySet')}
-                                            className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                                        />
-                                        <span className="text-gray-700">Study set (flash cards)</span>
-                                    </label>
+                                <div className="space-y-4 mb-8">
+                                    {[
+                                        { key: 'studyGuide', label: 'Study Guide', icon: '📚' },
+                                        { key: 'practiceQuestions', label: 'Practice Questions (with answers)', icon: '❓' },
+                                        { key: 'practiceTest', label: 'Practice Test', icon: '📝' },
+                                        { key: 'studySet', label: 'Study Set (Flash Cards)', icon: '🃏' }
+                                    ].map(({ key, label, icon }) => (
+                                        <label key={key} className="flex items-center space-x-4 p-4 rounded-xl border-2 border-gray-200 hover:border-[#8B0000] transition-colors cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedTools[key]}
+                                                onChange={() => toggleToolSelection(key)}
+                                                className="w-6 h-6 text-[#8B0000] border-2 border-gray-300 rounded-md focus:ring-[#8B0000]"
+                                            />
+                                            <span className="text-3xl">{icon}</span>
+                                            <span className="text-lg text-gray-700 font-medium">{label}</span>
+                                        </label>
+                                    ))}
                                 </div>
                                 
                                 {!hasSelectedTools && (
-                                    <p className="text-red-600 text-sm mb-4">
-                                        Select at least one item to generate
-                                    </p>
+                                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                                        <p className="text-red-600 text-base font-medium">
+                                            ⚠️ Select at least one item to generate
+                                        </p>
+                                    </div>
                                 )}
                                 
                                 <div className="flex justify-end space-x-4">
                                     <button
                                         onClick={() => setShowGenerateModal(false)}
-                                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                                        className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors font-medium"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleGenerate}
                                         disabled={!hasSelectedTools}
-                                        className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-8 py-3 bg-gradient-to-r from-[#8B0000] to-[#A52A2A] text-white rounded-xl hover:from-[#A52A2A] hover:to-[#8B0000] transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
                                     >
                                         Generate
                                     </button>
                                 </div>
                             </>
                         ) : (
-                            <div className="text-center">
-                                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-4"></div>
-                                <p className="text-gray-700">Generating, May take a few minutes</p>
+                            <div className="text-center py-8">
+                                <div className="inline-flex items-center justify-center w-24 h-24 bg-[#8B0000] rounded-full mb-6">
+                                    <div className="animate-spin rounded-full h-14 w-14 border-4 border-[#F3B13B] border-t-transparent"></div>
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-800 mb-2">Generating Your Materials</h3>
+                                <p className="text-lg text-gray-600">This may take a few minutes...</p>
                             </div>
                         )}
                     </div>
