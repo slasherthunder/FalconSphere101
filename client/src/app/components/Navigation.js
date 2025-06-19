@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FaHome, FaPlus, FaGamepad, FaSignInAlt, FaLightbulb, FaUser, FaSignOutAlt, FaRobot } from "react-icons/fa";
-import { auth } from "./firebase";
+import { FaHome, FaPlus, FaGamepad, FaSignInAlt, FaLightbulb, FaUser, FaSignOutAlt, FaRobot, FaBook } from "react-icons/fa";
+import { auth } from "../../components/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +33,7 @@ export default function Navigation() {
 
   const navigationItems = [
     { href: "/", label: "Home", icon: FaHome },
+    { href: "/course", label: "Courses", icon: FaBook },
     { href: "/create-set", label: "Create Sets", icon: FaPlus },
     { href: "/new-game", label: "New Game", icon: FaGamepad },
     { href: "/join-game", label: "Join Game", icon: FaSignInAlt },
