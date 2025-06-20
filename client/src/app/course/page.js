@@ -156,92 +156,94 @@ const CoursePage = () => {
                         
                         {/* Unit Boxes */}
                         <div className="space-y-6">
-                            {courseData.units.map((unit, index) => (
-                                <div 
-                                    key={unit.id} 
-                                    className="bg-gradient-to-r from-[#8B0000] to-[#A52A2A] rounded-xl shadow-xl overflow-hidden border border-[#F3B13B]/30 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]"
-                                    style={{ animationDelay: `${index * 100}ms` }}
-                                >
-                                    {/* Main Unit Box */}
-                                    <div className="p-6 flex items-center justify-between bg-gradient-to-r from-[#8B0000]/80 to-[#A52A2A]/80">
-                                        <div className="flex items-center space-x-6">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedUnits[unit.id]}
-                                                onChange={() => toggleUnitSelection(unit.id)}
-                                                className="w-8 h-8 text-[#8B0000] border-2 border-[#F3B13B] rounded-md focus:ring-2 focus:ring-[#F3B13B] focus:ring-offset-2 focus:ring-offset-[#8B0000] transition-all duration-200 bg-[#F3B13B] checked:bg-[#FFD700] checked:border-[#FFD700]"
-                                            />
-                                            <div>
+                            {courseData.units.map((unit, index) => {
+                                const isSelected = selectedUnits[unit.id];
+                                return (
+                                    <div 
+                                        key={unit.id} 
+                                        className={`bg-gradient-to-r from-[#8B0000] to-[#A52A2A] rounded-xl shadow-xl overflow-hidden border border-[#F3B13B]/30 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] ${isSelected ? 'ring-4 ring-[#FFD700]/40' : ''}`}
+                                        style={{ animationDelay: `${index * 100}ms` }}
+                                    >
+                                        {/* Main Unit Box */}
+                                        <div className="p-6 flex items-center justify-between bg-gradient-to-r from-[#8B0000]/80 to-[#A52A2A]/80">
+                                            <label
+                                                htmlFor={`unit-checkbox-${unit.id}`}
+                                                className="flex items-center space-x-6 cursor-pointer select-none w-full"
+                                            >
+                                                <input
+                                                    id={`unit-checkbox-${unit.id}`}
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleUnitSelection(unit.id)}
+                                                    className="w-8 h-8 text-[#8B0000] border-2 border-[#F3B13B] rounded-md focus:ring-2 focus:ring-[#F3B13B] focus:ring-offset-2 focus:ring-offset-[#8B0000] transition-all duration-200 bg-[#F3B13B] checked:bg-[#FFD700] checked:border-[#FFD700] mr-4"
+                                                />
                                                 <span className="text-2xl font-bold text-[#F3B13B]">
                                                     Unit {unit.id}: {unit.name}
                                                 </span>
                                                 <div className="w-20 h-0.5 bg-[#F3B13B] mt-2 rounded-full"></div>
-                                            </div>
+                                            </label>
+                                            <button
+                                                onClick={() => toggleUnitExpansion(unit.id)}
+                                                className="text-[#F3B13B] hover:text-[#FFD700] transition-all duration-300 transform hover:scale-110 p-2 rounded-full hover:bg-[#F3B13B]/10 ml-4"
+                                                aria-label={expandedUnits[unit.id] ? `Collapse Unit ${unit.id}` : `Expand Unit ${unit.id}`}
+                                            >
+                                                {expandedUnits[unit.id] ? (
+                                                    <FaChevronUp className="w-6 h-6" />
+                                                ) : (
+                                                    <FaChevronDown className="w-6 h-6" />
+                                                )}
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => toggleUnitExpansion(unit.id)}
-                                            className="text-[#F3B13B] hover:text-[#FFD700] transition-all duration-300 transform hover:scale-110 p-2 rounded-full hover:bg-[#F3B13B]/10"
-                                        >
-                                            {expandedUnits[unit.id] ? (
-                                                <FaChevronUp className="w-6 h-6" />
-                                            ) : (
-                                                <FaChevronDown className="w-6 h-6" />
-                                            )}
-                                        </button>
-                                    </div>
 
-                                    {/* Expanded Content */}
-                                    {expandedUnits[unit.id] && (
-                                        <div className="border-t border-[#F3B13B]/20 p-8 bg-gradient-to-br from-[#600000] to-[#8B0000]">
-                                            <div className="max-w-4xl mx-auto">
-                                                <div className="bg-[#8B0000]/50 rounded-xl p-6 mb-6 border border-[#F3B13B]/20">
-                                                    <h3 className="text-3xl font-bold text-[#F3B13B] mb-4 flex items-center">
-                                                        <FaLightbulb className="mr-3 text-[#F3B13B]" />
-                                                        What Is Covered?
-                                                    </h3>
-                                                    <p className="text-[#F3B13B]/95 text-xl leading-relaxed">
-                                                        {unit.description}
-                                                    </p>
-                                                </div>
-                                                
-                                                <div className="text-center mb-8">
-                                                    <h4 className="text-3xl font-bold text-[#F3B13B] mb-6">
-                                                        Choose Your Difficulty Level
-                                                    </h4>
-                                                    
-                                                    <div className="max-w-md mx-auto mb-6">
-                                                        <select
-                                                            value={difficulties[unit.id] || ''}
-                                                            onChange={(e) => handleDifficultyChange(unit.id, e.target.value)}
-                                                            className="w-full p-4 border-2 border-[#F3B13B] rounded-xl focus:ring-4 focus:ring-[#F3B13B]/30 focus:border-[#F3B13B] bg-[#8B0000] text-[#F3B13B] text-lg font-medium shadow-lg"
-                                                        >
-                                                            <option value="">Select difficulty...</option>
-                                                            <option value="easy">Easy</option>
-                                                            <option value="medium">Medium</option>
-                                                            <option value="hard">Hard</option>
-                                                        </select>
-                                                    </div>
-                                                    
-                                                    <div className="bg-[#8B0000]/50 rounded-xl p-4 border border-[#F3B13B]/20">
-                                                        <p className="text-[#F3B13B]/90 text-base leading-relaxed">
-                                                            <span className="font-semibold">Note:</span> Medium models the typical rigor based on the district curriculum, and is best used for review. It is recommended to start there, scale down to Easy if you need a refresher, or up it to Hard for more practice and solidify the skills.
+                                        {/* Expanded Content: Only What is Covered */}
+                                        {expandedUnits[unit.id] && (
+                                            <div className="border-t border-[#F3B13B]/20 p-8 bg-gradient-to-br from-[#600000] to-[#8B0000]">
+                                                <div className="max-w-4xl mx-auto">
+                                                    <div className="bg-[#8B0000]/50 rounded-xl p-6 border border-[#F3B13B]/20">
+                                                        <h3 className="text-3xl font-bold text-[#F3B13B] mb-4 flex items-center">
+                                                            <FaLightbulb className="mr-3 text-[#F3B13B]" />
+                                                            What Is Covered?
+                                                        </h3>
+                                                        <p className="text-[#F3B13B]/95 text-xl leading-relaxed">
+                                                            {unit.description}
                                                         </p>
                                                     </div>
                                                 </div>
-                                                
-                                                <div className="text-center">
-                                                    <button
-                                                        onClick={() => setShowGenerateModal(true)}
-                                                        className="bg-gradient-to-r from-[#F3B13B] to-[#FFD700] text-[#8B0000] px-10 py-4 rounded-xl hover:from-[#FFD700] hover:to-[#F3B13B] transition-all duration-300 font-bold text-xl shadow-lg transform hover:scale-105"
-                                                    >
-                                                        Generate Studying Tools
-                                                    </button>
-                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Difficulty and Generate Section (outside units) */}
+                        <div className="mt-12 text-center">
+                            <h4 className="text-3xl font-bold text-[#F3B13B] mb-6">
+                                Choose Your Difficulty Level
+                            </h4>
+                            <div className="max-w-md mx-auto mb-6">
+                                <select
+                                    value={difficulties['main'] || ''}
+                                    onChange={e => handleDifficultyChange('main', e.target.value)}
+                                    className="w-full p-4 border-2 border-[#F3B13B] rounded-xl focus:ring-4 focus:ring-[#F3B13B]/30 focus:border-[#F3B13B] bg-[#8B0000] text-[#F3B13B] text-lg font-medium shadow-lg"
+                                >
+                                    <option value="">Select difficulty...</option>
+                                    <option value="easy">Easy</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            <div className="bg-[#8B0000]/50 rounded-xl p-4 border border-[#F3B13B]/20 mb-8">
+                                <p className="text-[#F3B13B]/90 text-base leading-relaxed">
+                                    <span className="font-semibold">Note:</span> Medium models the typical rigor based on the district curriculum, and is best used for review. It is recommended to start there, scale down to Easy if you need a refresher, or up it to Hard for more practice and solidify the skills.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowGenerateModal(true)}
+                                className="bg-gradient-to-r from-[#F3B13B] to-[#FFD700] text-[#8B0000] px-10 py-4 rounded-xl hover:from-[#FFD700] hover:to-[#F3B13B] transition-all duration-300 font-bold text-xl shadow-lg transform hover:scale-105"
+                            >
+                                Generate Studying Tools
+                            </button>
                         </div>
                     </div>
                 </div>
