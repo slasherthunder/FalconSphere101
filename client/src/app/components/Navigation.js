@@ -14,7 +14,17 @@ export default function Navigation() {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const router = useRouter();
 
-  const ID = Math.floor(10000000 + Math.random() * 90000000).toString();
+  
+  const [ID, setID] = useState("0")
+
+  const randomizeID = ()  =>{
+    setID(Math.floor(10000000 + Math.random() * 90000000).toString())
+
+  };
+
+  useEffect(() => {
+      randomizeID()
+  }, []);
 
 
   useEffect(() => {
@@ -38,7 +48,7 @@ export default function Navigation() {
     { href: "/", label: "Home", icon: FaHome },
     { href: "/course", label: "Courses", icon: FaBook },
     { href: "/create-set", label: "Create Sets", icon: FaPlus },
-    { href: "/dynamic-page/new-test/" + ID, label: "New Game", icon: FaGamepad },
+    { href: "/dynamic-page/new-test/" + ID, label: "New Game", icon: FaGamepad},
     { href: "/join-game", label: "Join Game", icon: FaSignInAlt },
     { href: "/feedview", label: "Peer Help", icon: FaLightbulb },
     { href: "/ai-integration", label: "FalconAI", icon: FaRobot },
@@ -60,6 +70,7 @@ export default function Navigation() {
           <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
               {navigationItems.map(({ href, label, icon: Icon }) => (
               <Link
+                onClick={randomizeID}
                 key={href}
                 href={href}
                 className="group flex items-center text-[#F3B13B] hover:text-[#FFD700] transition-all duration-300 relative py-2"
