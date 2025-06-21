@@ -46,7 +46,6 @@ export default function Navigation() {
 
   const navigationItems = [
     { href: "/", label: "Home", icon: FaHome },
-    { href: "/course", label: "Courses", icon: FaBook },
     { href: "/create-set", label: "Create Sets", icon: FaPlus },
     { href: "/dynamic-page/new-test/" + ID, label: "New Game", icon: FaGamepad},
     { href: "/join-game", label: "Join Game", icon: FaSignInAlt },
