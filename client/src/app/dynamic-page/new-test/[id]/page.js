@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { db } from "@/app/components/firebase";
+import { db } from "@/components/firebase";
 import { collection, getDocs, doc, setDoc, addDoc , getDoc, updateDoc} from "firebase/firestore";
 import { FaCopy, FaRedo, FaPlay, FaTrash, FaEdit, FaCrown } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
@@ -198,7 +198,7 @@ useEffect(() => {
 
   
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#8B0000] via-[#700000] to-[#600000] py-12 px-4">
+    <div className="min-h-screen w-full bg-white py-12 px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -207,7 +207,7 @@ useEffect(() => {
       >
         {/* Session Code Card */}
         <motion.div
-          className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
+          className="bg-[#8B0000] p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
           whileHover={{ scale: 1.02 }}
           transition={{ duration: 0.3 }}
         >
@@ -244,7 +244,7 @@ useEffect(() => {
 
         {/* Set Selection Card */}
         <motion.div
-          className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
+          className="bg-[#8B0000] p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -279,7 +279,7 @@ useEffect(() => {
 
           {/* Players List Card */}
           <motion.div
-            className="bg-gradient-to-br from-[#700000]/90 to-[#600000]/90 backdrop-blur-lg p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
+            className="bg-[#8B0000] p-8 rounded-2xl shadow-2xl mb-8 border border-[#FFD700]/20"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
