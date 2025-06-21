@@ -27,7 +27,7 @@ import {
   BsEmojiSunglasses,
   BsStars,
 } from "react-icons/bs";
-import { db, auth } from "../components/firebase";
+import { db, auth } from "../../components/firebase";
 import {
   collection,
   addDoc,
@@ -157,6 +157,8 @@ export default function QuestionFeed() {
   const [userId, setUserId] = useState("");
   const [popularTags, setPopularTags] = useState([]);
   const [highlightedQuestionId, setHighlightedQuestionId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState(null);
   const questionsPerPage = 5;
   const characterLimit = 200;
   const [user, setUser] = useState(null);
@@ -438,12 +440,25 @@ export default function QuestionFeed() {
   };
 
   const handleDelete = async (id) => {
+    const question = questions.find(q => q.id === id);
+    setQuestionToDelete(question);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
     try {
-      await deleteDoc(doc(db, "questions", id));
+      await deleteDoc(doc(db, "questions", questionToDelete.id));
       setCurrentPage(1);
+      setShowDeleteConfirm(false);
+      setQuestionToDelete(null);
     } catch (error) {
       console.error("Error deleting question: ", error);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setQuestionToDelete(null);
   };
 
   const handleEdit = (id, text) => {
@@ -839,14 +854,16 @@ export default function QuestionFeed() {
                       {/* Action Buttons */}
                       <div className="mt-4 flex justify-end space-x-4">
                         {isOwner(question) && (
+                          <motion.button
+                            onClick={() => handleEdit(question.id, question.text)}
+                            whileHover={{ scale: 1.05 }}
+                            className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
+                          >
+                            <FaEdit className="mr-2" /> Edit
+                          </motion.button>
+                        )}
+                        {user && (
                           <>
-                            <motion.button
-                              onClick={() => handleEdit(question.id, question.text)}
-                              whileHover={{ scale: 1.05 }}
-                              className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
-                            >
-                              <FaEdit className="mr-2" /> Edit
-                            </motion.button>
                             <motion.button
                               onClick={() => handleDelete(question.id)}
                               whileHover={{ scale: 1.05 }}
@@ -854,16 +871,14 @@ export default function QuestionFeed() {
                             >
                               <FaTrash className="mr-2" /> Delete
                             </motion.button>
+                            <motion.button
+                              onClick={() => handleReply(question.id)}
+                              whileHover={{ scale: 1.05 }}
+                              className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
+                            >
+                              <FaReply className="mr-2" /> Reply
+                            </motion.button>
                           </>
-                        )}
-                        {user && (
-                          <motion.button
-                            onClick={() => handleReply(question.id)}
-                            whileHover={{ scale: 1.05 }}
-                            className="text-[#FFD700] hover:text-[#FFA500] flex items-center transition-colors duration-300"
-                          >
-                            <FaReply className="mr-2" /> Reply
-                          </motion.button>
                         )}
                       </div>
 
@@ -1000,13 +1015,13 @@ export default function QuestionFeed() {
                                   <FaTimes className="mr-2" /> Cancel
                                 </motion.button>
                                 {user ? (
-                                  <motion.button
-                                    onClick={() => submitReply(question.id)}
-                                    whileHover={{ scale: 1.05 }}
-                                    className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-xl font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
-                                  >
-                                    <FaSave className="mr-2" /> Submit
-                                  </motion.button>
+                                <motion.button
+                                  onClick={() => submitReply(question.id)}
+                                  whileHover={{ scale: 1.05 }}
+                                  className="bg-[#FFD700] text-[#8B0000] px-6 py-2 rounded-xl font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
+                                >
+                                  <FaSave className="mr-2" /> Submit
+                                </motion.button>
                                 ) : (
                                   <Link href="/signup">
                                     <motion.button
@@ -1214,6 +1229,49 @@ export default function QuestionFeed() {
                   </motion.button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div className="bg-gradient-to-br from-[#8B0000] to-[#A52A2A] p-8 rounded-2xl shadow-2xl w-full max-w-md">
+              <h2 className="text-2xl text-[#FFD700] font-bold mb-4 tracking-wide">Confirm Delete</h2>
+              <p className="text-[#FFD700]/90 text-lg mb-6">
+                Are you sure you want to delete this question? This action cannot be undone.
+              </p>
+              {questionToDelete && (
+                <div className="bg-[#700000]/80 backdrop-blur-sm p-4 rounded-xl mb-6">
+                  <p className="text-[#FFD700] text-sm leading-relaxed">{questionToDelete.text}</p>
+                </div>
+              )}
+              <div className="flex justify-end space-x-4">
+                <motion.button
+                  onClick={cancelDelete}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-[#700000] text-[#FFD700] px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:bg-[#800000]"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={confirmDelete}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-[#FF0000] text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:bg-[#CC0000] shadow-lg"
+                >
+                  Delete
+                </motion.button>
+              </div>
             </motion.div>
           </motion.div>
         )}
