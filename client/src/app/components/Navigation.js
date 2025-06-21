@@ -14,6 +14,9 @@ export default function Navigation() {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const router = useRouter();
 
+  const ID = Math.floor(10000000 + Math.random() * 90000000).toString();
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
@@ -35,7 +38,7 @@ export default function Navigation() {
     { href: "/", label: "Home", icon: FaHome },
     { href: "/course", label: "Courses", icon: FaBook },
     { href: "/create-set", label: "Create Sets", icon: FaPlus },
-    { href: "/new-game", label: "New Game", icon: FaGamepad },
+    { href: "/dynamic-page/new-test/" + ID, label: "New Game", icon: FaGamepad },
     { href: "/join-game", label: "Join Game", icon: FaSignInAlt },
     { href: "/feedview", label: "Peer Help", icon: FaLightbulb },
     { href: "/ai-integration", label: "FalconAI", icon: FaRobot },
