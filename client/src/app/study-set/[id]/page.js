@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db, auth } from "../../components/firebase"; // Import Firestore instance and auth
+import { db, auth } from "../../../components/firebase"; // Import Firestore instance and auth
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { motion, AnimatePresence } from "framer-motion"; // For animations
 import { onAuthStateChanged } from "firebase/auth";
@@ -61,6 +61,8 @@ export default function StudySet() {
   const [loading, setLoading] = useState(true); // State to handle loading
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0); // Track current slide
   const [selectedAnswer, setSelectedAnswer] = useState(""); // Track user's selected answer
+  const [selectedAnswers, setSelectedAnswers] = useState([]); // Track multiple selected answers
+  const [openEndedAnswer, setOpenEndedAnswer] = useState(""); // Track open-ended answer input
   const [score, setScore] = useState(0); // Track user's score
   const [showResult, setShowResult] = useState(false); // Show result after quiz ends
   const [isPlaying, setIsPlaying] = useState(false); // Track if in play mode
@@ -153,9 +155,25 @@ export default function StudySet() {
     setSelectedAnswer(answer);
   };
 
+  const handleMultipleAnswerSelect = (answer) => {
+    setSelectedAnswers(prev => {
+      if (prev.includes(answer)) {
+        return prev.filter(a => a !== answer);
+      } else {
+        return [...prev, answer];
+      }
+    });
+  };
+
+  const handleOpenEndedAnswerChange = (value) => {
+    setOpenEndedAnswer(value);
+  };
+
   const handleReset = () => {
     setCurrentSlideIndex(0);
     setSelectedAnswer("");
+    setSelectedAnswers([]);
+    setOpenEndedAnswer("");
     setScore(0);
     setShowResult(false);
     setShowAnswer(false);
@@ -174,9 +192,20 @@ export default function StudySet() {
   };
 
   const handleNextQuestion = () => {
-    const isCorrect = selectedAnswer === (selectedMode === "Random Order" ? 
-      shuffledQuestions[currentSlideIndex].correctAnswer : 
-      setData.slides[currentSlideIndex].correctAnswer);
+    const currentQuestion = getCurrentQuestion();
+    let isCorrect = false;
+
+    // Handle different question types
+    if (currentQuestion.questionType === "multipleChoice") {
+      isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+    } else if (currentQuestion.questionType === "multipleCorrect") {
+      // For multiple correct answers, check if selected answer is in the correct answers array
+      isCorrect = currentQuestion.correctAnswers && currentQuestion.correctAnswers.includes(selectedAnswer);
+    } else if (currentQuestion.questionType === "openEnded") {
+      // For open-ended questions, we'll need to implement a different UI
+      // For now, we'll skip scoring for open-ended questions
+      isCorrect = false; // Open-ended questions need manual review
+    }
 
     if (isCorrect) {
       setScore(score + 1);
@@ -194,6 +223,8 @@ export default function StudySet() {
     if (currentSlideIndex < setData.slides.length - 1) {
       setCurrentSlideIndex(currentSlideIndex + 1);
       setSelectedAnswer("");
+      setSelectedAnswers([]);
+      setOpenEndedAnswer("");
       if (selectedMode === "Speed Challenge") {
         setTimeLeft(SPEED_CHALLENGE_TIME);
       }
@@ -217,6 +248,8 @@ export default function StudySet() {
   const restartQuiz = () => {
     setCurrentSlideIndex(0);
     setSelectedAnswer("");
+    setSelectedAnswers([]);
+    setOpenEndedAnswer("");
     setScore(0);
     setShowResult(false);
     setIsPlaying(false);
@@ -327,6 +360,8 @@ export default function StudySet() {
     setSelectedMode(mode.title);
     setCurrentSlideIndex(0);
     setSelectedAnswer("");
+    setSelectedAnswers([]);
+    setOpenEndedAnswer("");
     setScore(0);
     setShowResult(false);
     setShowAnswer(false);
@@ -416,14 +451,14 @@ export default function StudySet() {
     const currentQuestion = getCurrentQuestion();
 
     if (isBreak) {
-      return (
-        <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="w-full max-w-4xl"
-          >
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-4xl"
+        >
             <motion.div
               className="bg-gradient-to-br from-[#8B0000] to-[#700000] p-8 rounded-2xl shadow-2xl border border-[#ffffff20] text-center"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -600,9 +635,9 @@ export default function StudySet() {
             <div className="bg-[#8B0000] rounded-2xl p-8 mb-8">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <span className="text-[#FFD700] text-xl tracking-wide font-medium">
-                    Question {currentSlideIndex + 1} of {setData.slides.length}
-                  </span>
+                <span className="text-[#FFD700] text-xl tracking-wide font-medium">
+                  Question {currentSlideIndex + 1} of {setData.slides.length}
+                </span>
                   {selectedMode === "Pomodoro Study" && (
                     <>
                       <div className="flex items-center gap-2">
@@ -641,7 +676,7 @@ export default function StudySet() {
                   )}
                 </div>
               </div>
-            </div>
+              </div>
 
             {selectedMode === "Flashcards" ? (
               <motion.div
@@ -663,61 +698,137 @@ export default function StudySet() {
               </motion.div>
             ) : (
               <>
-                <motion.h3
+              <motion.h3
                   className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide text-center"
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
                   {currentQuestion.question}
-                </motion.h3>
+              </motion.h3>
 
                 {currentQuestion.imageData && (
-                  <motion.div
-                    className="relative overflow-hidden rounded-xl mb-8 shadow-xl"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4, delay: 0.2 }}
-                  >
-                    <img
+                <motion.div
+                  className="relative overflow-hidden rounded-xl mb-8 shadow-xl"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                  <img
                       src={currentQuestion.imageData}
-                      alt="Question"
-                      className="w-full h-auto max-h-96 object-contain rounded-xl"
-                    />
-                  </motion.div>
+                    alt="Question"
+                    className="w-full h-auto max-h-96 object-contain rounded-xl"
+                  />
+                </motion.div>
+              )}
+
+                {/* Render different UI based on question type */}
+                {currentQuestion.questionType === "multipleChoice" && (
+                  <div className="space-y-4 mb-8">
+                    {currentQuestion.options.map((option, index) => (
+                      <motion.button
+                        key={index}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => handleAnswerSelect(option)}
+                        className={`w-full p-6 rounded-xl text-xl font-medium transition-all duration-200 ${
+                          selectedAnswer === option
+                            ? option === currentQuestion.correctAnswer
+                              ? "bg-green-600 text-white"
+                              : "bg-red-600 text-white"
+                            : "bg-[#700000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                        }`}
+                        disabled={selectedAnswer !== ""}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{option}</span>
+                          {selectedAnswer === option && (
+                            <span className="ml-4">
+                              {option === currentQuestion.correctAnswer ? (
+                                <FaCheck className="text-white text-xl" />
+                              ) : (
+                                <FaTimes className="text-white text-xl" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
                 )}
 
-                <div className="space-y-4 mb-8">
-                  {currentQuestion.options.map((option, index) => (
-                    <motion.button
-                      key={index}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      onClick={() => handleAnswerSelect(option)}
-                      className={`w-full p-6 rounded-xl text-xl font-medium transition-all duration-200 ${
-                        selectedAnswer === option
-                          ? option === currentQuestion.correctAnswer
-                            ? "bg-green-600 text-white"
-                            : "bg-red-600 text-white"
-                          : "bg-[#700000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
-                      }`}
-                      disabled={selectedAnswer !== ""}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{option}</span>
-                        {selectedAnswer === option && (
-                          <span className="ml-4">
-                            {option === currentQuestion.correctAnswer ? (
-                              <FaCheck className="text-white text-xl" />
-                            ) : (
-                              <FaTimes className="text-white text-xl" />
-                            )}
-                          </span>
-                        )}
+                {currentQuestion.questionType === "multipleCorrect" && (
+                  <div className="space-y-4 mb-8">
+                    {currentQuestion.options.map((option, index) => (
+                      <motion.button
+                        key={index}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => handleMultipleAnswerSelect(option)}
+                        className={`w-full p-6 rounded-xl text-xl font-medium transition-all duration-200 ${
+                          selectedAnswers.includes(option)
+                            ? currentQuestion.correctAnswers && currentQuestion.correctAnswers.includes(option)
+                              ? "bg-green-600 text-white"
+                              : "bg-red-600 text-white"
+                            : "bg-[#700000] text-[#FFD700] hover:bg-[#FFD700] hover:text-[#8B0000]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{option}</span>
+                          {selectedAnswers.includes(option) && (
+                            <span className="ml-4">
+                              {currentQuestion.correctAnswers && currentQuestion.correctAnswers.includes(option) ? (
+                                <FaCheck className="text-white text-xl" />
+                              ) : (
+                                <FaTimes className="text-white text-xl" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </motion.button>
+                    ))}
+                    {selectedAnswers.length > 0 && (
+                      <div className="mt-4 p-4 bg-[#700000] rounded-xl">
+                        <p className="text-[#FFD700] text-lg mb-2">Selected answers:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedAnswers.map((answer, index) => (
+                            <span key={index} className="px-3 py-1 bg-[#FFD700] text-[#8B0000] rounded-lg text-sm">
+                              {answer}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </motion.button>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                )}
+
+                {currentQuestion.questionType === "openEnded" && (
+                  <div className="space-y-4 mb-8">
+                    <div className="mb-4">
+                      <label className="block text-[#FFD700] text-lg font-medium mb-3">Your Answer:</label>
+                      <motion.input
+                        whileFocus={{ scale: 1.02 }}
+                        type="text"
+                        value={openEndedAnswer}
+                        onChange={(e) => handleOpenEndedAnswerChange(e.target.value)}
+                        className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                        placeholder="Type your answer here..."
+                      />
+                    </div>
+                    {openEndedAnswer && (
+                      <div className="mt-4 p-4 bg-[#700000] rounded-xl">
+                        <p className="text-[#FFD700] text-lg mb-2">Sample answers:</p>
+                        <div className="space-y-2">
+                          {currentQuestion.sampleAnswers && currentQuestion.sampleAnswers.map((sampleAnswer, index) => (
+                            <div key={index} className="p-3 bg-[#8B0000] rounded-lg">
+                              <p className="text-[#FFD700] text-sm">{sampleAnswer}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {selectedMode !== "Active Recall" && (
                   <div className="flex justify-between items-center gap-4">
@@ -736,9 +847,15 @@ export default function StudySet() {
                       whileHover="hover"
                       whileTap="tap"
                       onClick={handleNextQuestion}
-                      disabled={!selectedAnswer}
+                      disabled={
+                        (currentQuestion.questionType === "multipleChoice" && !selectedAnswer) ||
+                        (currentQuestion.questionType === "multipleCorrect" && selectedAnswers.length === 0) ||
+                        (currentQuestion.questionType === "openEnded" && !openEndedAnswer.trim())
+                      }
                       className={`flex-1 py-4 rounded-xl font-medium text-xl transition-all duration-200 flex items-center justify-center gap-2 ${
-                        selectedAnswer
+                        ((currentQuestion.questionType === "multipleChoice" && selectedAnswer) ||
+                         (currentQuestion.questionType === "multipleCorrect" && selectedAnswers.length > 0) ||
+                         (currentQuestion.questionType === "openEnded" && openEndedAnswer.trim()))
                           ? "bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300]"
                           : "bg-gray-500 text-gray-300 cursor-not-allowed"
                       }`}
@@ -768,7 +885,7 @@ export default function StudySet() {
                 <FaRedo /> Reset
               </motion.button>
             </div>
-          </motion.div>
+            </motion.div>
         </motion.div>
       </div>
     );
@@ -870,7 +987,7 @@ export default function StudySet() {
                   </motion.div>
                 )}
                 <div className="space-y-3">
-                  {currentSlide.options.map((option, index) => (
+                  {currentSlide.questionType === "multipleChoice" && currentSlide.options.map((option, index) => (
                     <motion.div
                       key={index}
                       whileHover={{ scale: 1.02, x: 5 }}
@@ -886,6 +1003,43 @@ export default function StudySet() {
                       </span>
                     </motion.div>
                   ))}
+                  
+                  {currentSlide.questionType === "multipleCorrect" && currentSlide.options.map((option, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex items-center p-4 rounded-xl border-2 ${
+                        currentSlide.correctAnswers && currentSlide.correctAnswers.includes(option)
+                          ? "border-green-500 bg-gradient-to-r from-green-900/50 to-green-800/50"
+                          : "border-[#FFD700] bg-gradient-to-r from-[#700000] to-[#600000]"
+                      } shadow-lg`}
+                    >
+                      <span className="ml-4 text-[#FFD700] text-lg">
+                        {option || `Option ${index + 1}`}
+                      </span>
+                    </motion.div>
+                  ))}
+                  
+                  {currentSlide.questionType === "openEnded" && (
+                    <motion.div
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-3"
+                    >
+                      <div className="text-[#FFD700] text-lg font-medium mb-2">Open-Ended Answers:</div>
+                      {currentSlide.sampleAnswers && currentSlide.sampleAnswers.map((answer, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center p-4 rounded-xl border-2 border-[#FFD700] bg-gradient-to-r from-[#700000] to-[#600000] shadow-lg"
+                        >
+                          <span className="ml-4 text-[#FFD700] text-lg">
+                            {answer || `Sample answer ${index + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -925,13 +1079,42 @@ export default function StudySet() {
 
                 {/* Correct Answer */}
                 <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
-                  <motion.div 
-                    className="p-4 bg-gradient-to-r from-[#700000] to-[#600000] rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg shadow-lg"
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    {currentSlide.correctAnswer || "No correct answer set"}
-                  </motion.div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">
+                    {currentSlide.questionType === "multipleCorrect" ? "Correct Answers:" : 
+                     currentSlide.questionType === "openEnded" ? "Sample Answers:" : "Correct Answer:"}
+                  </label>
+                  {currentSlide.questionType === "multipleCorrect" ? (
+                    <div className="space-y-2">
+                      {currentSlide.correctAnswers && currentSlide.correctAnswers.map((answer, index) => (
+                        <motion.div 
+                          key={index}
+                          className="p-4 bg-gradient-to-r from-[#700000] to-[#600000] rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg shadow-lg"
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          {answer || `Correct answer ${index + 1}`}
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : currentSlide.questionType === "openEnded" ? (
+                    <div className="space-y-2">
+                      {currentSlide.sampleAnswers && currentSlide.sampleAnswers.map((answer, index) => (
+                        <motion.div 
+                          key={index}
+                          className="p-4 bg-gradient-to-r from-[#700000] to-[#600000] rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg shadow-lg"
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          {answer || `Sample answer ${index + 1}`}
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <motion.div 
+                      className="p-4 bg-gradient-to-r from-[#700000] to-[#600000] rounded-xl border-2 border-[#FFD700] text-[#FFD700] text-lg shadow-lg"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      {currentSlide.correctAnswer || "No correct answer set"}
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Download Set Button */}
