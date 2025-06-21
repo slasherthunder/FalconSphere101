@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db } from "../../components/firebase";
+import { db } from "../../../components/firebase";
 import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { Filter } from "bad-words";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,8 +47,11 @@ export default function EditSet() {
   const [slides, setSlides] = useState([
     {
       question: "",
+      questionType: "multipleChoice",
       options: ["", "", "", ""],
       correctAnswer: "",
+      correctAnswers: [],
+      sampleAnswers: [""],
       imageData: null,
     },
   ]);
@@ -58,6 +61,13 @@ export default function EditSet() {
   const [loading, setLoading] = useState(true);
 
   const currentSlide = slides[currentSlideIndex];
+
+  // Question type options
+  const questionTypes = [
+    { value: "multipleChoice", label: "Multiple Choice (Single Answer)" },
+    { value: "multipleCorrect", label: "Multiple Choice (Multiple Answers)" },
+    { value: "openEnded", label: "Open-Ended Answer" }
+  ];
 
   // Validate for profanity
   const validateProfanity = (text) => {
@@ -78,18 +88,45 @@ export default function EditSet() {
         setError(`Question in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
         return;
       }
-      for (const option of slide.options) {
-        if (validateProfanity(option)) {
-          setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+
+      // Validate based on question type
+      if (slide.questionType === "multipleChoice") {
+        for (const option of slide.options) {
+          if (validateProfanity(option)) {
+            setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+            return;
+          }
+        }
+        // Check if correct answer is one of the options
+        if (!slide.options.includes(slide.correctAnswer)) {
+          setError(`Correct answer in slide ${slides.indexOf(slide) + 1} must be one of the options.`);
           return;
         }
+      } else if (slide.questionType === "multipleCorrect") {
+        for (const option of slide.options) {
+          if (validateProfanity(option)) {
+            setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+            return;
+          }
+        }
+        // Check if all correct answers are in the options
+        if (slide.correctAnswers && slide.correctAnswers.length > 0) {
+          for (const correctAnswer of slide.correctAnswers) {
+            if (!slide.options.includes(correctAnswer)) {
+              setError(`Correct answer "${correctAnswer}" in slide ${slides.indexOf(slide) + 1} must be one of the options.`);
+              return;
+            }
+          }
+        }
+      } else if (slide.questionType === "openEnded") {
+        // Check all sample answers for profanity
+        for (const sampleAnswer of slide.sampleAnswers) {
+          if (validateProfanity(sampleAnswer)) {
+            setError(`Open-ended answer in slide ${slides.indexOf(slide) + 1} contains inappropriate language. Please revise.`);
+            return;
+          }
+        }
       }
-    }
-
-    // Check if correct answer is one of the options
-    if (!currentSlide.options.includes(currentSlide.correctAnswer)) {
-      setError("Correct answer must be one of the options.");
-      return;
     }
 
     // Proceed with saving if no profanity is found
@@ -160,8 +197,11 @@ export default function EditSet() {
           setSlides(data.slides || [
             {
               question: "",
+              questionType: "multipleChoice",
               options: ["", "", "", ""],
               correctAnswer: "",
+              correctAnswers: [],
+              sampleAnswers: [""],
               imageData: null,
             },
           ]);
@@ -205,8 +245,11 @@ export default function EditSet() {
       ...slides,
       {
         question: "",
+        questionType: "multipleChoice",
         options: ["", "", "", ""],
         correctAnswer: "",
+        correctAnswers: [],
+        sampleAnswers: [""],
         imageData: null,
       },
     ]);
@@ -245,6 +288,52 @@ export default function EditSet() {
     const updatedSlides = [...slides];
     updatedSlides[currentSlideIndex].correctAnswer = correctAnswer;
     setSlides(updatedSlides);
+  };
+
+  const handleQuestionTypeChange = (questionType) => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].questionType = questionType;
+    // Reset answer fields when changing question type
+    updatedSlides[currentSlideIndex].correctAnswer = "";
+    updatedSlides[currentSlideIndex].correctAnswers = [];
+    updatedSlides[currentSlideIndex].sampleAnswers = [""];
+    setSlides(updatedSlides);
+  };
+
+  const handleMultipleCorrectChange = (option, isChecked) => {
+    const updatedSlides = [...slides];
+    if (isChecked) {
+      updatedSlides[currentSlideIndex].correctAnswers = [
+        ...(updatedSlides[currentSlideIndex].correctAnswers || []),
+        option
+      ];
+    } else {
+      updatedSlides[currentSlideIndex].correctAnswers = 
+        (updatedSlides[currentSlideIndex].correctAnswers || []).filter(ans => ans !== option);
+    }
+    setSlides(updatedSlides);
+  };
+
+  const handleSampleAnswerChange = (index, value) => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].sampleAnswers[index] = value;
+    setSlides(updatedSlides);
+  };
+
+  const handleAddSampleAnswer = () => {
+    const updatedSlides = [...slides];
+    updatedSlides[currentSlideIndex].sampleAnswers.push("");
+    setSlides(updatedSlides);
+  };
+
+  const handleRemoveSampleAnswer = (index) => {
+    const updatedSlides = [...slides];
+    if (updatedSlides[currentSlideIndex].sampleAnswers.length > 1) {
+      updatedSlides[currentSlideIndex].sampleAnswers.splice(index, 1);
+      setSlides(updatedSlides);
+    } else {
+      setError("At least one open-ended answer is required");
+    }
   };
 
   if (loading) {
@@ -371,7 +460,7 @@ export default function EditSet() {
                   </motion.div>
                 )}
                 <div className="space-y-3">
-                  {currentSlide.options.map((option, index) => (
+                  {currentSlide.questionType === "multipleChoice" && currentSlide.options.map((option, index) => (
                     <motion.div
                       key={index}
                       whileHover={{ scale: 1.02, x: 5 }}
@@ -395,6 +484,49 @@ export default function EditSet() {
                       </span>
                     </motion.div>
                   ))}
+                  
+                  {currentSlide.questionType === "multipleCorrect" && currentSlide.options.map((option, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex items-center p-4 rounded-xl border-2 ${
+                        currentSlide.correctAnswers && currentSlide.correctAnswers.includes(option)
+                          ? "border-green-500 bg-green-900/50"
+                          : "border-[#FFD700] bg-[#700000]"
+                      } backdrop-blur-sm shadow-lg`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={currentSlide.correctAnswers && currentSlide.correctAnswers.includes(option)}
+                        readOnly
+                        className="form-checkbox h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
+                      />
+                      <span className="ml-4 text-[#FFD700] text-lg">
+                        {option || `Option ${index + 1}`}
+                      </span>
+                    </motion.div>
+                  ))}
+                  
+                  {currentSlide.questionType === "openEnded" && (
+                    <motion.div
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-3"
+                    >
+                      <div className="text-[#FFD700] text-lg font-medium mb-2">Open-Ended Answers:</div>
+                      {currentSlide.sampleAnswers && currentSlide.sampleAnswers.map((answer, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center p-4 rounded-xl border-2 border-[#FFD700] bg-[#700000] backdrop-blur-sm shadow-lg"
+                        >
+                          <span className="ml-4 text-[#FFD700] text-lg">
+                            {answer || `Sample answer ${index + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -479,6 +611,23 @@ export default function EditSet() {
                   />
                 </div>
 
+                {/* Question Type */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Question Type:</label>
+                  <motion.select
+                    whileFocus={{ scale: 1.02 }}
+                    value={currentSlide.questionType}
+                    onChange={(e) => handleQuestionTypeChange(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                  >
+                    {questionTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </motion.select>
+                </div>
+
                 {/* Image */}
                 <div>
                   <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Image:</label>
@@ -490,62 +639,130 @@ export default function EditSet() {
                   />
                 </div>
 
-                {/* Options */}
-                <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Options:</label>
-                  <div className="space-y-3">
-                    {currentSlide.options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <motion.input
-                          whileFocus={{ scale: 1.02 }}
-                          type="text"
-                          value={option}
-                          onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className="flex-1 p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
-                          placeholder={`Enter a possible answer`}
-                        />
-                        <motion.button
-                          variants={buttonVariants}
-                          whileHover="hover"
-                          whileTap="tap"
-                          type="button"
-                          onClick={() => handleRemoveOption(index)}
-                          className="bg-red-600/90 text-white w-12 h-12 rounded-xl hover:bg-red-700 transition-all duration-300 shadow-lg"
-                        >
-                          ×
-                        </motion.button>
-                      </div>
-                    ))}
-                    <motion.button
-                      variants={buttonVariants}
-                      whileHover="hover"
-                      whileTap="tap"
-                      type="button"
-                      onClick={handleAddOption}
-                      className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold hover:bg-[#FFC300] transition-all duration-300 shadow-lg"
-                    >
-                      Add Option
-                    </motion.button>
+                {/* Options - Only show for multiple choice questions */}
+                {(currentSlide.questionType === "multipleChoice" || currentSlide.questionType === "multipleCorrect") && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Options:</label>
+                    <div className="space-y-3">
+                      {currentSlide.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <motion.input
+                            whileFocus={{ scale: 1.02 }}
+                            type="text"
+                            value={option}
+                            onChange={(e) => handleOptionChange(index, e.target.value)}
+                            className="flex-1 p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                            placeholder={`Enter a possible answer`}
+                          />
+                          <motion.button
+                            variants={buttonVariants}
+                            whileHover="hover"
+                            whileTap="tap"
+                            type="button"
+                            onClick={() => handleRemoveOption(index)}
+                            className="bg-red-600/90 text-white w-12 h-12 rounded-xl hover:bg-red-700 transition-all duration-300 shadow-lg"
+                          >
+                            ×
+                          </motion.button>
+                        </div>
+                      ))}
+                      <motion.button
+                        variants={buttonVariants}
+                        whileHover="hover"
+                        whileTap="tap"
+                        type="button"
+                        onClick={handleAddOption}
+                        className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold hover:bg-[#FFC300] transition-all duration-300 shadow-lg"
+                      >
+                        Add Option
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Correct Answer */}
-                <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
-                  <motion.select
-                    whileFocus={{ scale: 1.02 }}
-                    value={currentSlide.correctAnswer}
-                    onChange={(e) => handleCorrectAnswerChange(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
-                  >
-                    <option value="">Select correct answer</option>
-                    {currentSlide.options.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option || `Option ${index + 1}`}
-                      </option>
-                    ))}
-                  </motion.select>
-                </div>
+                {/* Correct Answer - Only show for single choice questions */}
+                {currentSlide.questionType === "multipleChoice" && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
+                    <motion.select
+                      whileFocus={{ scale: 1.02 }}
+                      value={currentSlide.correctAnswer}
+                      onChange={(e) => handleCorrectAnswerChange(e.target.value)}
+                      className="w-full p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                    >
+                      <option value="">Select correct answer</option>
+                      {currentSlide.options.map((option, index) => (
+                        <option key={index} value={option}>
+                          {option || `Option ${index + 1}`}
+                        </option>
+                      ))}
+                    </motion.select>
+                  </div>
+                )}
+
+                {/* Multiple Correct Answers */}
+                {currentSlide.questionType === "multipleCorrect" && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answers:</label>
+                    <div className="space-y-3">
+                      {currentSlide.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <motion.input
+                            whileFocus={{ scale: 1.02 }}
+                            type="checkbox"
+                            checked={currentSlide.correctAnswers.includes(option)}
+                            onChange={(e) => handleMultipleCorrectChange(option, e.target.checked)}
+                            className="form-checkbox h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
+                          />
+                          <span className="ml-4 text-[#FFD700] text-lg">
+                            {option || `Option ${index + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sample Answers */}
+                {currentSlide.questionType === "openEnded" && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Sample Answers:</label>
+                    <div className="space-y-3">
+                      {currentSlide.sampleAnswers.map((answer, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <motion.input
+                            whileFocus={{ scale: 1.02 }}
+                            type="text"
+                            value={answer}
+                            onChange={(e) => handleSampleAnswerChange(index, e.target.value)}
+                            className="flex-1 p-4 border-2 rounded-xl bg-[#700000] text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                            placeholder="Enter a sample answer"
+                          />
+                          <motion.button
+                            variants={buttonVariants}
+                            whileHover="hover"
+                            whileTap="tap"
+                            type="button"
+                            onClick={() => handleRemoveSampleAnswer(index)}
+                            className="bg-red-600/90 text-white w-12 h-12 rounded-xl hover:bg-red-700 transition-all duration-300 shadow-lg"
+                          >
+                            ×
+                          </motion.button>
+                        </div>
+                      ))}
+                      <motion.button
+                        variants={buttonVariants}
+                        whileHover="hover"
+                        whileTap="tap"
+                        type="button"
+                        onClick={handleAddSampleAnswer}
+                        className="bg-[#FFD700] text-[#8B0000] px-6 py-3 rounded-xl font-bold hover:bg-[#FFC300] transition-all duration-300 shadow-lg"
+                      >
+                        Add Sample Answer
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-4">
