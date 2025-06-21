@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { db, auth } from "../components/firebase";
+import { db, auth } from "../../components/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { Filter } from "bad-words";
 import { motion } from "framer-motion";
@@ -64,8 +64,11 @@ export default function CreateSet() {
   const [slides, setSlides] = useState([
     {
       question: "",
+      questionType: "multipleChoice",
       options: ["", "", "", ""],
       correctAnswer: "",
+      correctAnswers: [],
+      sampleAnswers: [""],
       imageData: null,
     },
   ]);
@@ -74,8 +77,14 @@ export default function CreateSet() {
   const [duplicateOptions, setDuplicateOptions] = useState([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [isExporting, setIsExporting] = useState(false);
-  const [isPublic, setIsPublic] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Question type options
+  const questionTypes = [
+    { value: "multipleChoice", label: "Multiple Choice (Single Answer)" },
+    { value: "multipleCorrect", label: "Multiple Choice (Multiple Answers)" },
+    { value: "openEnded", label: "Open-Ended Answer" }
+  ];
 
   const convertToCSV = () => {
     if (!title) {
@@ -83,7 +92,7 @@ export default function CreateSet() {
       return null;
     }
 
-    let csv = "Question,Option1,Option2,Option3,Option4,CorrectAnswer,ImageData\n";
+    let csv = "Question,QuestionType,Option1,Option2,Option3,Option4,CorrectAnswer,CorrectAnswers,OpenEndedAnswers,ImageData\n";
     
     slides.forEach(slide => {
       const imageData = slide.imageData ? 
@@ -92,8 +101,11 @@ export default function CreateSet() {
       
       const row = [
         `"${(slide.question || '').replace(/"/g, '""')}"`,
+        `"${slide.questionType || 'multipleChoice'}"`,
         ...slide.options.map(opt => `"${(opt || '').replace(/"/g, '""')}"`),
         `"${(slide.correctAnswer || '').replace(/"/g, '""')}"`,
+        `"${(slide.correctAnswers || []).join('|').replace(/"/g, '""')}"`,
+        `"${(slide.sampleAnswers || []).join('|').replace(/"/g, '""')}"`,
         imageData ? `"${imageData}"` : '""'
       ].join(",");
       
@@ -150,26 +162,32 @@ export default function CreateSet() {
             const row = results.data[i];
             if (!row[0]) continue;
 
+            const questionType = row[1] || "multipleChoice";
             const options = [];
-            for (let j = 1; j <= 4; j++) {
+            for (let j = 2; j <= 5; j++) {
               options.push(row[j] || "");
             }
 
-            const correctAnswer = row[5] || "";
+            const correctAnswer = row[6] || "";
+            const correctAnswers = row[7] ? row[7].split('|').filter(a => a.trim()) : [];
+            const sampleAnswers = row[8] ? row[8].split('|').filter(a => a.trim()) : [""];
             let imageData = null;
 
-            if (row[6] && row[6].trim() !== "") {
-              if (row[6].startsWith('data:')) {
-                imageData = row[6];
+            if (row[9] && row[9].trim() !== "") {
+              if (row[9].startsWith('data:')) {
+                imageData = row[9];
               } else {
-                imageData = `data:image/jpeg;base64,${row[6]}`;
+                imageData = `data:image/jpeg;base64,${row[9]}`;
               }
             }
 
             importedSlides.push({
               question: row[0],
+              questionType: questionType,
               options: options,
               correctAnswer: correctAnswer,
+              correctAnswers: correctAnswers,
+              sampleAnswers: sampleAnswers,
               imageData: imageData
             });
           }
@@ -254,31 +272,74 @@ export default function CreateSet() {
         return;
       }
 
-      const validOptions = slide.options.filter(opt => opt.trim() !== "");
-      if (validOptions.length < 2) {
-        setError(`Slide ${slides.indexOf(slide) + 1} needs at least 2 options`);
-        return;
-      }
-
-      if (!slide.correctAnswer.trim()) {
-        setError(`Please select a correct answer for slide ${slides.indexOf(slide) + 1}`);
-        return;
-      }
-
-      for (const option of slide.options) {
-        if (validateProfanity(option)) {
-          setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
+      // Validate based on question type
+      if (slide.questionType === "multipleChoice") {
+        const validOptions = slide.options.filter(opt => opt.trim() !== "");
+        if (validOptions.length < 2) {
+          setError(`Slide ${slides.indexOf(slide) + 1} needs at least 2 options`);
           return;
         }
-      }
 
-      const hasDuplicates = new Set(
-        slide.options.filter(opt => opt.trim() !== "")
-      ).size !== slide.options.filter(opt => opt.trim() !== "").length;
+        if (!slide.correctAnswer.trim()) {
+          setError(`Please select a correct answer for slide ${slides.indexOf(slide) + 1}`);
+          return;
+        }
 
-      if (hasDuplicates) {
-        setError(`Options must be unique in slide ${slides.indexOf(slide) + 1}`);
-        return;
+        for (const option of slide.options) {
+          if (validateProfanity(option)) {
+            setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
+            return;
+          }
+        }
+
+        const hasDuplicates = new Set(
+          slide.options.filter(opt => opt.trim() !== "")
+        ).size !== slide.options.filter(opt => opt.trim() !== "").length;
+
+        if (hasDuplicates) {
+          setError(`Options must be unique in slide ${slides.indexOf(slide) + 1}`);
+          return;
+        }
+      } else if (slide.questionType === "multipleCorrect") {
+        const validOptions = slide.options.filter(opt => opt.trim() !== "");
+        if (validOptions.length < 2) {
+          setError(`Slide ${slides.indexOf(slide) + 1} needs at least 2 options`);
+          return;
+        }
+
+        if (slide.correctAnswers.length === 0) {
+          setError(`Please select at least one correct answer for slide ${slides.indexOf(slide) + 1}`);
+          return;
+        }
+
+        for (const option of slide.options) {
+          if (validateProfanity(option)) {
+            setError(`Option in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
+            return;
+          }
+        }
+
+        const hasDuplicates = new Set(
+          slide.options.filter(opt => opt.trim() !== "")
+        ).size !== slide.options.filter(opt => opt.trim() !== "").length;
+
+        if (hasDuplicates) {
+          setError(`Options must be unique in slide ${slides.indexOf(slide) + 1}`);
+          return;
+        }
+      } else if (slide.questionType === "openEnded") {
+        if (!slide.sampleAnswers[0].trim()) {
+          setError(`Please provide an open-ended answer for slide ${slides.indexOf(slide) + 1}`);
+          return;
+        }
+
+        // Check all sample answers for profanity
+        for (const sampleAnswer of slide.sampleAnswers) {
+          if (validateProfanity(sampleAnswer)) {
+            setError(`Open-ended answer in slide ${slides.indexOf(slide) + 1} contains inappropriate language`);
+            return;
+          }
+        }
       }
     }
 
@@ -286,12 +347,15 @@ export default function CreateSet() {
       title,
       slides: slides.map(slide => ({
         question: slide.question,
+        questionType: slide.questionType,
         options: slide.options,
         correctAnswer: slide.correctAnswer,
+        correctAnswers: slide.correctAnswers || [],
+        sampleAnswers: slide.sampleAnswers || [""],
         imageData: slide.imageData || null
       })),
       createdAt: new Date().toISOString(),
-      isPublic: user ? isPublic : false,
+      isPublic: !!user,
       userId: user ? user.uid : null,
       userEmail: user ? user.email : null
     };
@@ -306,16 +370,17 @@ export default function CreateSet() {
       setTitle("");
       setSlides([{
         question: "",
+        questionType: "multipleChoice",
         options: ["", "", "", ""],
         correctAnswer: "",
+        correctAnswers: [],
+        sampleAnswers: [""],
         imageData: null,
       }]);
       setCurrentSlideIndex(0);
       setDuplicateOptions([]);
       setError("");
-      setSuccessMessage(user ? 
-        (isPublic ? "Set created and shared publicly!" : "Set created and saved privately!") : 
-        "Set created successfully! (Only visible to you)");
+      setSuccessMessage(user ? "Set created and shared successfully!" : "Set created successfully! (Only visible to you)");
     } catch (error) {
       console.error("Error saving set: ", error);
       setError("Failed to save the set. Please try again.");
@@ -329,8 +394,11 @@ export default function CreateSet() {
       ...slides,
       {
         question: "",
+        questionType: "multipleChoice",
         options: ["", "", "", ""],
         correctAnswer: "",
+        correctAnswers: [],
+        sampleAnswers: [""],
         imageData: null,
       },
     ]);
@@ -371,6 +439,58 @@ export default function CreateSet() {
     const newSlides = [...slides];
     newSlides[currentSlideIndex].correctAnswer = value;
     setSlides(newSlides);
+  };
+
+  const handleQuestionTypeChange = (value) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].questionType = value;
+    // Reset answer fields when changing question type
+    newSlides[currentSlideIndex].correctAnswer = "";
+    newSlides[currentSlideIndex].correctAnswers = [];
+    newSlides[currentSlideIndex].sampleAnswers = [""];
+    setSlides(newSlides);
+  };
+
+  const handleMultipleCorrectChange = (option, isChecked) => {
+    const newSlides = [...slides];
+    if (isChecked) {
+      newSlides[currentSlideIndex].correctAnswers = [
+        ...(newSlides[currentSlideIndex].correctAnswers || []),
+        option
+      ];
+    } else {
+      newSlides[currentSlideIndex].correctAnswers = 
+        (newSlides[currentSlideIndex].correctAnswers || []).filter(ans => ans !== option);
+    }
+    setSlides(newSlides);
+  };
+
+  const handleOpenAnswerChange = (value) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].sampleAnswers = [value];
+    setSlides(newSlides);
+  };
+
+  const handleSampleAnswerChange = (index, value) => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].sampleAnswers[index] = value;
+    setSlides(newSlides);
+  };
+
+  const handleAddSampleAnswer = () => {
+    const newSlides = [...slides];
+    newSlides[currentSlideIndex].sampleAnswers.push("");
+    setSlides(newSlides);
+  };
+
+  const handleRemoveSampleAnswer = (index) => {
+    const newSlides = [...slides];
+    if (newSlides[currentSlideIndex].sampleAnswers.length > 1) {
+      newSlides[currentSlideIndex].sampleAnswers.splice(index, 1);
+      setSlides(newSlides);
+    } else {
+      setError("At least one open-ended answer is required");
+    }
   };
 
   const handleAddOption = () => {
@@ -617,7 +737,7 @@ export default function CreateSet() {
                   </motion.div>
                 )}
                 <div className="space-y-3">
-                  {currentSlide.options.map((option, index) => (
+                  {currentSlide.questionType === "multipleChoice" && currentSlide.options.map((option, index) => (
                     <motion.div
                       key={index}
                       whileHover={{ scale: 1.02, x: 5 }}
@@ -641,6 +761,53 @@ export default function CreateSet() {
                       </span>
                     </motion.div>
                   ))}
+                  
+                  {currentSlide.questionType === "multipleCorrect" && currentSlide.options.map((option, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex items-center p-4 rounded-xl border-2 ${
+                        duplicateOptions.includes(index)
+                          ? "border-red-500 bg-red-900/50"
+                          : "border-[#FFD700] bg-[#700000]"
+                      } shadow-lg backdrop-blur-sm`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={currentSlide.correctAnswers.includes(option)}
+                        readOnly
+                        className="form-checkbox h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
+                      />
+                      <span className="ml-4 text-[#FFD700] text-lg">
+                        {option || `Option ${index + 1}`}
+                      </span>
+                    </motion.div>
+                  ))}
+                  
+                  {currentSlide.questionType === "openEnded" && (
+                    <motion.div
+                      whileHover={{ scale: 1.02, x: 5 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-3"
+                    >
+                      <div className="text-[#FFD700] text-lg font-medium mb-2">Open-Ended Answers:</div>
+                      {currentSlide.sampleAnswers.map((answer, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center p-4 rounded-xl border-2 border-[#FFD700] bg-[#700000] shadow-lg backdrop-blur-sm"
+                        >
+                          <input
+                            type="text"
+                            value={answer || ""}
+                            readOnly
+                            className="flex-1 bg-transparent text-[#FFD700] placeholder-[#FFD700]/50 border-none outline-none"
+                            placeholder={`Open-ended answer ${index + 1}...`}
+                          />
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -667,34 +834,6 @@ export default function CreateSet() {
                     required
                   />
                 </div>
-
-                {/* Public/Private Toggle - Only show for logged-in users */}
-                {user && (
-                  <div className="flex items-center justify-between p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm border-[#FFD700]">
-                    <label className="text-[#FFD700] text-lg font-medium tracking-wide">Visibility:</label>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[#FFD700] ${!isPublic ? 'opacity-100' : 'opacity-50'}`}>Private</span>
-                      <motion.button
-                        type="button"
-                        onClick={() => setIsPublic(!isPublic)}
-                        className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${
-                          isPublic ? 'bg-[#FFD700]' : 'bg-[#700000]'
-                        }`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <motion.div
-                          className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full"
-                          animate={{
-                            x: isPublic ? 28 : 0,
-                            transition: { type: "spring", stiffness: 500, damping: 30 }
-                          }}
-                        />
-                      </motion.button>
-                      <span className={`text-[#FFD700] ${isPublic ? 'opacity-100' : 'opacity-50'}`}>Public</span>
-                    </div>
-                  </div>
-                )}
 
                 {/* Slide Navigation */}
                 <div>
@@ -747,6 +886,24 @@ export default function CreateSet() {
                   />
                 </div>
 
+                {/* Question Type */}
+                <div>
+                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Question Type:</label>
+                  <motion.select
+                    whileFocus={{ scale: 1.02 }}
+                    value={currentSlide.questionType}
+                    onChange={(e) => handleQuestionTypeChange(e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                    required
+                  >
+                    {questionTypes.map((type, index) => (
+                      <option key={index} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </motion.select>
+                </div>
+
                 {/* Image */}
                 <div>
                   <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Image:</label>
@@ -777,69 +934,143 @@ export default function CreateSet() {
                   )}
                 </div>
 
-                {/* Options */}
-                <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Options:</label>
-                  <div className="space-y-3">
-                    {currentSlide.options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <motion.input
-                          whileFocus={{ scale: 1.02 }}
-                          type="text"
-                          value={option}
-                          onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className={`flex-1 p-3 border-2 rounded-lg bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 ${
-                            duplicateOptions.includes(index) ? "border-red-500" : "border-[#FFD700]"
-                          }`}
-                          placeholder={`Option ${index + 1}`}
-                          required
-                        />
-                        <motion.button
-                          variants={buttonVariants}
-                          whileHover="hover"
-                          whileTap="tap"
-                          type="button"
-                          onClick={() => handleRemoveOption(index)}
-                          className="bg-red-600/90 backdrop-blur-sm text-white w-10 h-10 rounded-lg hover:bg-red-700 transition-all duration-300 shadow-lg flex items-center justify-center"
-                        >
-                          ×
-                        </motion.button>
-                      </div>
-                    ))}
-                    <motion.button
-                      variants={buttonVariants}
-                      whileHover="hover"
-                      whileTap="tap"
-                      type="button"
-                      onClick={handleAddOption}
-                      className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-5 py-2 rounded-lg font-bold hover:shadow-xl transition-all duration-300 shadow-lg flex items-center gap-2 justify-center"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Add Option
-                    </motion.button>
+                {/* Options - Only show for multiple choice questions */}
+                {(currentSlide.questionType === "multipleChoice" || currentSlide.questionType === "multipleCorrect") && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Options:</label>
+                    <div className="space-y-3">
+                      {currentSlide.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <motion.input
+                            whileFocus={{ scale: 1.02 }}
+                            type="text"
+                            value={option}
+                            onChange={(e) => handleOptionChange(index, e.target.value)}
+                            className={`flex-1 p-3 border-2 rounded-lg bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 ${
+                              duplicateOptions.includes(index) ? "border-red-500" : "border-[#FFD700]"
+                            }`}
+                            placeholder={`Option ${index + 1}`}
+                            required
+                          />
+                          <motion.button
+                            variants={buttonVariants}
+                            whileHover="hover"
+                            whileTap="tap"
+                            type="button"
+                            onClick={() => handleRemoveOption(index)}
+                            className="bg-red-600/90 backdrop-blur-sm text-white w-10 h-10 rounded-lg hover:bg-red-700 transition-all duration-300 shadow-lg flex items-center justify-center"
+                          >
+                            ×
+                          </motion.button>
+                        </div>
+                      ))}
+                      <motion.button
+                        variants={buttonVariants}
+                        whileHover="hover"
+                        whileTap="tap"
+                        type="button"
+                        onClick={handleAddOption}
+                        className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-5 py-2 rounded-lg font-bold hover:shadow-xl transition-all duration-300 shadow-lg flex items-center gap-2 justify-center"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Option
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Correct Answer */}
-                <div>
-                  <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
-                  <motion.select
-                    whileFocus={{ scale: 1.02 }}
-                    value={currentSlide.correctAnswer}
-                    onChange={(e) => handleCorrectAnswerChange(e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
-                    required
-                  >
-                    <option value="">Select correct answer</option>
-                    {currentSlide.options.map((option, index) => (
-                      <option key={index} value={option}>
-                        {option || `Option ${index + 1}`}
-                      </option>
-                    ))}
-                  </motion.select>
-                </div>
+                {/* Correct Answer - Only show for single choice questions */}
+                {currentSlide.questionType === "multipleChoice" && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answer:</label>
+                    <motion.select
+                      whileFocus={{ scale: 1.02 }}
+                      value={currentSlide.correctAnswer}
+                      onChange={(e) => handleCorrectAnswerChange(e.target.value)}
+                      className="w-full p-4 border-2 rounded-xl bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300"
+                      required
+                    >
+                      <option value="">Select correct answer</option>
+                      {currentSlide.options.map((option, index) => (
+                        <option key={index} value={option}>
+                          {option || `Option ${index + 1}`}
+                        </option>
+                      ))}
+                    </motion.select>
+                  </div>
+                )}
+
+                {/* Multiple Correct Answers */}
+                {currentSlide.questionType === "multipleCorrect" && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Correct Answers:</label>
+                    <div className="space-y-3">
+                      {currentSlide.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <motion.input
+                            whileFocus={{ scale: 1.02 }}
+                            type="checkbox"
+                            checked={currentSlide.correctAnswers.includes(option)}
+                            onChange={(e) => handleMultipleCorrectChange(option, e.target.checked)}
+                            className="form-checkbox h-6 w-6 text-[#FFD700] border-2 border-[#FFD700]"
+                          />
+                          <span className="ml-4 text-[#FFD700] text-lg">
+                            {option || `Option ${index + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Open Answer */}
+                {currentSlide.questionType === "openEnded" && (
+                  <div>
+                    <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">Open-Ended Answers:</label>
+                    <div className="space-y-3">
+                      {currentSlide.sampleAnswers.map((answer, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <motion.input
+                            whileFocus={{ scale: 1.02 }}
+                            type="text"
+                            value={answer}
+                            onChange={(e) => handleSampleAnswerChange(index, e.target.value)}
+                            className="flex-1 p-3 border-2 rounded-lg bg-[#700000]/80 backdrop-blur-sm text-[#FFD700] placeholder-[#FFD700]/80 focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all duration-300 border-[#FFD700]"
+                            placeholder={`Open-ended answer ${index + 1}`}
+                            required={index === 0}
+                          />
+                          {currentSlide.sampleAnswers.length > 1 && (
+                            <motion.button
+                              variants={buttonVariants}
+                              whileHover="hover"
+                              whileTap="tap"
+                              type="button"
+                              onClick={() => handleRemoveSampleAnswer(index)}
+                              className="bg-red-600/90 backdrop-blur-sm text-white w-10 h-10 rounded-lg hover:bg-red-700 transition-all duration-300 shadow-lg flex items-center justify-center"
+                            >
+                              ×
+                            </motion.button>
+                          )}
+                        </div>
+                      ))}
+                      <motion.button
+                        variants={buttonVariants}
+                        whileHover="hover"
+                        whileTap="tap"
+                        type="button"
+                        onClick={handleAddSampleAnswer}
+                        className="bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000] px-5 py-2 rounded-lg font-bold hover:shadow-xl transition-all duration-300 shadow-lg flex items-center gap-2 justify-center"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Open-Ended Answer
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Save Set Button */}
                 <motion.button
