@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/app/components/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { connect } from "socket.io-client";
 
 const containerVariants = {
@@ -24,84 +24,82 @@ const LeaderboardPage = () => {
   const [showDetails, setShowDetails] = useState({});
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      console.log("This runs every second");
-      const fetchLeaderboard = async () => {
-        try {
-          const docRef = doc(db, "game", code);
-          const docSnap = await getDoc(docRef);
-  
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setGameData(data);
-            const sortedPlayers = [...data.players].sort((a, b) => b.correctAnswers - a.correctAnswers);
-            setPlayers(sortedPlayers);
-            
-            // Initialize showDetails state
+  const fetchLeaderboard = async () => {
+    try {
+      const docRef = doc(db, "game", code);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setGameData(data);
+        const sortedPlayers = [...data.players].sort(
+          (a, b) => b.correctAnswers - a.correctAnswers
+        );
+        setPlayers(sortedPlayers);
+
+        // ✅ Only initialize `showDetails` if it's still empty
+        setShowDetails(prev => {
+          if (Object.keys(prev).length === 0) {
             const detailsState = {};
             sortedPlayers.forEach(player => {
               detailsState[player.name] = false;
             });
-            setShowDetails(detailsState);
-          } else {
-            console.log("No such game document!");
+            return detailsState;
           }
-        } catch (error) {
-          console.error("Error fetching leaderboard data:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      fetchLeaderboard();
-    }, 1000); // 1000 ms = 1 second
-  
-    // Cleanup to avoid memory leaks
-    return () => clearInterval(interval);
+          return prev;
+        });
+      } else {
+        console.log("No such game document!");
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  }, [code]);
+  const interval = setInterval(fetchLeaderboard, 1000);
+  return () => clearInterval(interval);
+}, [code]);
 
   const togglePlayerDetails = (playerName) => {
-    setShowDetails(prev => ({
+    setShowDetails((prev) => ({
       ...prev,
-      [playerName]: !prev[playerName]
+      [playerName]: !prev[playerName],
     }));
   };
 
   const calculateQuestionStats = (questionIndex) => {
     if (!players.length || !gameData?.questions?.[questionIndex]) return {};
-    
+
     const question = gameData.questions[questionIndex];
     const totalPlayers = players.length;
     let correctCount = 0;
     let totalScore = 0;
     const answerDistribution = {};
-    
-    // Initialize answer distribution
-    question.options.forEach(opt => {
+
+    question.options.forEach((opt) => {
       answerDistribution[opt] = 0;
     });
-    
-    players.forEach(player => {
+
+    players.forEach((player) => {
       const playerAnswer = player.answers?.[questionIndex];
       const playerScore = player.questionScores?.[questionIndex] || 0;
-      
+
       totalScore += playerScore;
-      
-      if (playerScore > 0) {
-        correctCount++;
-      }
-      
+      if (playerScore > 0) correctCount++;
+
       if (playerAnswer) {
-        answerDistribution[playerAnswer] = (answerDistribution[playerAnswer] || 0) + 1;
+        answerDistribution[playerAnswer] =
+          (answerDistribution[playerAnswer] || 0) + 1;
       }
     });
-    
+
     return {
       correctCount,
       incorrectCount: totalPlayers - correctCount,
       averageScore: (totalScore / totalPlayers).toFixed(2),
-      answerDistribution
+      answerDistribution,
     };
   };
 
@@ -192,7 +190,7 @@ const LeaderboardPage = () => {
             const correctAnswers = player.questionScores?.reduce((count, score) => score > 0 ? count + 1 : count, 0) || 0;
             const totalQuestions = player.currentSlide;
             const accuracy = ((player.correctAnswers / totalQuestions) * 100).toFixed(1);
-            
+
             return (
               <div key={player.name} className="rounded-xl overflow-hidden shadow-md border border-[#FFD700]/30">
                 <motion.div
@@ -236,26 +234,31 @@ const LeaderboardPage = () => {
                       <h3 className="text-[#FFD700] font-bold mb-3 text-lg">Question-by-Question Performance</h3>
                       <div className="grid gap-4">
                         {gameData.questions?.map((question, qIndex) => {
-                          const playerAnswer = player.answers?.[qIndex] || "No answer";
-                          const isCorrect = (player.questionScores?.[qIndex] || 0) > 0;
-                          const score = player.questionScores?.[qIndex] || 0;
-                          
-                          return (
-                            <div key={qIndex} className="bg-[#300000]/50 p-3 rounded-lg">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="text-[#FFD700] font-semibold">Q{qIndex + 1}: {question.question}</p>
-                                  <p className="text-[#FFAAAA]">Your answer: {playerAnswer}</p>
+                        const playerAnswer = player.answers?.[qIndex] || "No answer";
+                        const isCorrect = (player.questionScores?.[qIndex] || 0) > 0;
+                        const score = player.questionScores?.[qIndex] || 0;
+
+                        return (
+                          <div key={qIndex} className="bg-[#300000]/50 p-3 rounded-lg">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="text-[#FFD700] font-semibold">Q{qIndex + 1}: {question.question}</p>
+                                <p className={`text-lg ${isCorrect ? "text-[#AAFFAA]" : "text-[#FFAAAA]"}`}>
+                                  Your answer: {playerAnswer}
+                                </p>
+                                {!isCorrect && (
                                   <p className="text-[#AAFFAA]">Correct answer: {question.correctAnswer}</p>
-                                </div>
-                                <div className={`px-3 py-1 rounded-full ${isCorrect ? 'bg-green-800 text-green-100' : 'bg-red-800 text-red-100'}`}>
-                                  {isCorrect ? 'Correct' : 'Incorrect'}
-                                </div>
+                                )}
                               </div>
-                              <p className="text-[#FFD700] mt-1">Points earned: {score}</p>
+                              <div className={`px-3 py-1 rounded-full ${isCorrect ? 'bg-green-800 text-green-100' : 'bg-red-800 text-red-100'}`}>
+                                {isCorrect ? 'Correct' : 'Incorrect'}
+                              </div>
                             </div>
-                          );
-                        })}
+                            <p className="text-[#FFD700] mt-1">Points earned: {score}</p>
+                          </div>
+                        );
+                      })}
+
                       </div>
                     </div>
                   </motion.div>
