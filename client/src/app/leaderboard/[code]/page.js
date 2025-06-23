@@ -6,6 +6,15 @@ import { db } from "@/app/components/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { connect } from "socket.io-client";
+import { Pie } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -187,41 +196,78 @@ const LeaderboardPage = () => {
         
         <div className="space-y-4">
           {players.map((player, index) => {
-            const correctAnswers = player.questionScores?.reduce((count, score) => score > 0 ? count + 1 : count, 0) || 0;
-            const totalQuestions = player.currentSlide;
-            const accuracy = ((player.correctAnswers / totalQuestions) * 100).toFixed(1);
+            // Use currentSlide as total questions answered by this player
+            const totalQuestions = player.currentSlide || 0;
+            const correctAnswers = Math.min(
+              player.questionResults?.filter(Boolean).length || 0,
+              totalQuestions
+            );
+            const incorrectAnswers = totalQuestions - correctAnswers;
+            const accuracy = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100).toFixed(1) : '0';
+
+            const pieData = {
+              labels: ['Correct', 'Incorrect'],
+              datasets: [{
+                data: [correctAnswers, incorrectAnswers],
+                backgroundColor: ['#34d399', '#f87171'],
+                borderColor: ['#059669', '#b91c1c'],
+                borderWidth: 2,
+                hoverOffset: 8,
+              }],
+            };
+
+            const pieOptions = {
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'bottom',
+                  labels: {
+                    color: '#FFD700',
+                    font: { size: 16, family: 'inherit', weight: 'bold' },
+                    padding: 20,
+                  },
+                },
+                tooltip: {
+                  backgroundColor: '#222',
+                  titleColor: '#FFD700',
+                  bodyColor: '#FFD700',
+                  borderColor: '#FFD700',
+                  borderWidth: 1,
+                },
+              },
+              cutout: '65%',
+              responsive: true,
+              maintainAspectRatio: false,
+            };
 
             return (
-              <div key={player.name} className="rounded-xl overflow-hidden shadow-md border border-[#FFD700]/30">
+              <div key={player.name} className="rounded-2xl overflow-hidden shadow-2xl border border-[#FFD700]/40 mb-12 bg-gradient-to-br from-[#2d0909] to-[#3a0d0d] hover:shadow-yellow-400/30 transition-shadow duration-300">
                 <motion.div
-                  className="flex justify-between items-center px-4 md:px-6 py-4 bg-[#500000]/80 cursor-pointer"
+                  className="flex flex-col md:flex-row justify-between items-center px-6 py-6 bg-[#500000]/90 border-b border-[#FFD700]/20"
                   whileHover={{ scale: 1.01 }}
                   onClick={() => togglePlayerDetails(player.name)}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-center gap-4">
-                    <span className="text-[#FFD700] text-lg md:text-xl font-bold w-8 text-center">#{index + 1}</span>
-                    <span className="text-[#FFD700] text-lg md:text-xl font-semibold">{player.name}</span>
+                  <div className="flex items-center gap-6 w-full md:w-auto">
+                    <span className="text-[#FFD700] text-2xl font-extrabold w-10 text-center bg-[#FFD700]/10 rounded-full shadow-inner">#{index + 1}</span>
+                    <span className="text-[#FFD700] text-2xl font-bold tracking-wide drop-shadow-lg">{player.name}</span>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <span className="text-[#FFD700] text-sm block">Score</span>
-                      <span className="text-[#FFD700] text-lg md:text-xl font-bold">{player.correctAnswers}</span>
+                  <div className="flex flex-wrap gap-6 mt-4 md:mt-0">
+                    <div className="flex flex-col items-center">
+                      <span className="text-[#FFD700]/80 text-xs font-semibold uppercase tracking-wider">Score</span>
+                      <span className="text-2xl font-bold text-[#FFD700] drop-shadow">{correctAnswers}</span>
                     </div>
-                    <div className="text-center hidden sm:block">
-                      <span className="text-[#FFD700] text-sm block">Accuracy</span>
-                      <span className="text-[#FFD700] text-lg md:text-xl font-bold">{accuracy}%</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[#FFD700]/80 text-xs font-semibold uppercase tracking-wider">Accuracy</span>
+                      <span className="text-2xl font-bold text-[#AAFFAA] drop-shadow">{accuracy}%</span>
                     </div>
-                    <div className="text-center hidden sm:block">
-                      <span className="text-[#FFD700] text-sm block">Correct</span>
-                      <span className="text-[#FFD700] text-lg md:text-xl font-bold">{player.correctAnswers}/{totalQuestions}</span>
-                    </div>
-                    <div className="text-[#FFD700] text-xl">
-                      {showDetails[player.name] ? '−' : '+'}
+                    <div className="flex flex-col items-center">
+                      <span className="text-[#FFD700]/80 text-xs font-semibold uppercase tracking-wider">Correct</span>
+                      <span className="text-2xl font-bold text-[#FFD700] drop-shadow">{correctAnswers}/{totalQuestions}</span>
                     </div>
                   </div>
                 </motion.div>
-                
+
                 {showDetails[player.name] && (
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
@@ -263,6 +309,28 @@ const LeaderboardPage = () => {
                     </div>
                   </motion.div>
                 )}
+
+                {/* Summary Card with Pie Chart */}
+                <div className="flex flex-wrap items-center gap-8 px-6 py-4 bg-[#FFD700]/5 border-b border-[#FFD700]/10">
+                  <div className="flex flex-col items-center bg-[#1a0909]/80 rounded-2xl shadow-lg p-4 min-w-[180px] max-w-[220px] mx-auto" style={{boxShadow:'0 4px 24px 0 #FFD70022'}}>
+                    <h4 className="text-[#FFD700] font-bold mb-2 text-lg">Correct vs Incorrect</h4>
+                    <div className="w-[120px] h-[120px]">
+                      <Pie data={pieData} options={pieOptions} />
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-900/80 text-[#AAFFAA] font-bold text-lg shadow-sm">
+                    <svg className="w-5 h-5 text-[#AAFFAA]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    {correctAnswers} Correct
+                  </span>
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-900/80 text-[#FFAAAA] font-bold text-lg shadow-sm">
+                    <svg className="w-5 h-5 text-[#FFAAAA]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    {incorrectAnswers} Incorrect
+                  </span>
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FFD700]/20 text-[#FFD700] font-bold text-lg shadow-sm">
+                    <svg className="w-5 h-5 text-[#FFD700]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" /></svg>
+                    {accuracy}% Accuracy
+                  </span>
+                </div>
               </div>
             );
           })}
