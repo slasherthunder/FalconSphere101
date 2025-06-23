@@ -50,7 +50,7 @@ export default function Navigation() {
     { href: "/dynamic-page/new-test/" + ID, label: "New Game", icon: FaGamepad},
     { href: "/join-game", label: "Join Game", icon: FaSignInAlt },
     { href: "/feedview", label: "Peer Help", icon: FaLightbulb },
-    { href: "/ai-integration", label: "FalconAI", icon: FaRobot },
+    { href: "/courses", label: "Courses", icon: FaBook },
   ];
 
   return (
