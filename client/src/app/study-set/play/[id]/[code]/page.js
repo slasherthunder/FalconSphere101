@@ -122,6 +122,59 @@ export default function PlaySet() {
     fetchSetData();
   }, [id]);
 
+  // After setData is loaded, ensure questions are written to the game document
+  useEffect(() => {
+    if (!setData) return;
+    const writeQuestionsToGame = async () => {
+      try {
+        const docRef = doc(db, "game", code);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // Only write if questions field is missing or empty
+          if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
+            // Map slides to a format suitable for leaderboard (question, options, correctAnswer)
+            const questions = setData.slides.map(slide => {
+              if (slide.questionType === "multipleChoice") {
+                return {
+                  question: slide.question,
+                  options: slide.options,
+                  correctAnswer: slide.correctAnswer,
+                  questionType: slide.questionType,
+                };
+              } else if (slide.questionType === "multipleCorrect") {
+                return {
+                  question: slide.question,
+                  options: slide.options,
+                  correctAnswer: slide.correctAnswers, // array
+                  questionType: slide.questionType,
+                };
+              } else if (slide.questionType === "openEnded") {
+                return {
+                  question: slide.question,
+                  options: [],
+                  correctAnswer: slide.openEndedAnswers, // array
+                  questionType: slide.questionType,
+                };
+              } else {
+                return {
+                  question: slide.question,
+                  options: slide.options || [],
+                  correctAnswer: slide.correctAnswer || slide.correctAnswers || slide.openEndedAnswers || [],
+                  questionType: slide.questionType,
+                };
+              }
+            });
+            await updateDoc(docRef, { questions });
+          }
+        }
+      } catch (e) {
+        console.error("Error writing questions to game document:", e);
+      }
+    };
+    writeQuestionsToGame();
+  }, [setData, code]);
+
   // Handle answer selection
   const handleAnswerSelect = (option) => {
     setSelectedAnswer(option);
@@ -182,7 +235,7 @@ export default function PlaySet() {
       }
     };
     updatePlayerData();
-
+    
     // Move to next question or finish
     if (currentSlideIndex < setData.slides.length - 1) {
       setCurrentSlideIndex(currentSlideIndex + 1);
