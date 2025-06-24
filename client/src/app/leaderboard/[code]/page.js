@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/app/components/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { motion, AnimatePresence } from "framer-motion";
 import { connect } from "socket.io-client";
 import { Pie } from "react-chartjs-2";
 import {
@@ -184,18 +183,14 @@ const LeaderboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 md:p-8">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="max-w-4xl mx-auto bg-[#8B0000] p-6 md:p-8 rounded-2xl shadow-2xl border border-[#FFD700]"
+    <div className="min-h-screen bg-[#8C1515] p-4 md:p-8">
+      <div
+        className="max-w-4xl mx-auto bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] p-6 md:p-8 rounded-3xl border-2 border-[#6B0D0D]"
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#FFD700] tracking-wide drop-shadow-lg text-center w-full">
             Leaderboard
           </h1>
-          <div className="w-24 h-2 bg-gradient-to-r from-[#FFD700] to-[#fffbe6] rounded-full mx-auto mt-2 mb-4"></div>
         </div>
         
         <div className="space-y-8">
@@ -223,7 +218,7 @@ const LeaderboardPage = () => {
             const pieOptions = {
               plugins: {
                 legend: {
-                  display: true,
+                  display: false,
                   position: 'bottom',
                   labels: {
                     color: '#FFD700',
@@ -245,24 +240,18 @@ const LeaderboardPage = () => {
             };
 
             return (
-              <motion.div
+              <div
                 key={player.name}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="rounded-3xl overflow-hidden shadow-2xl border-4 border-[#FFD700] mb-12 bg-[#8B0000] hover:shadow-[0_0_32px_8px_rgba(255,215,0,0.3)] transition-shadow duration-300 relative group"
+                className="rounded-3xl overflow-hidden border-2 border-[#6B0D0D] mb-12 bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] relative group"
               >
                 {/* Gold accent bar */}
-                <div className="h-2 w-full bg-gradient-to-r from-[#FFD700] to-[#fffbe6]" />
+                {/* <div className="h-1 w-full bg-gradient-to-r from-[#FFD700] to-[#fffbe6] opacity-80" /> */}
                 {/* Crown for top player */}
                 {index === 0 && (
                   <FaCrown className="absolute -top-6 left-1/2 -translate-x-1/2 text-[#FFD700] text-4xl drop-shadow-lg z-10 animate-bounce" />
                 )}
-                <motion.div
-                  className="flex flex-col md:flex-row justify-between items-center px-8 py-8 bg-[#8B0000] border-b border-[#FFD700] cursor-pointer gap-6"
-                  whileHover={{ scale: 1.01 }}
-                  onClick={() => togglePlayerDetails(player.name)}
-                  transition={{ duration: 0.2 }}
+                <div
+                  className="flex flex-col md:flex-row justify-between items-center px-8 py-8 bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] border-b border-[#6B0D0D]/60 gap-6"
                 >
                   <div className="flex items-center gap-8 w-full md:w-auto">
                     <span className="text-[#FFD700] text-3xl font-extrabold w-14 h-14 flex items-center justify-center text-center bg-[#FFD700]/10 rounded-full shadow-inner border-2 border-[#FFD700]">
@@ -272,7 +261,7 @@ const LeaderboardPage = () => {
                       {player.name}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-10 mt-4 md:mt-0">
+                  <div className="flex flex-wrap gap-10 mt-4 md:mt-0 items-center">
                     <div className="flex flex-col items-center">
                       <span className="text-[#FFD700] text-sm font-semibold uppercase tracking-wider">Accuracy</span>
                       <span className="text-2xl md:text-3xl font-bold text-[#FFD700] drop-shadow">{accuracy}%</span>
@@ -281,36 +270,48 @@ const LeaderboardPage = () => {
                       <span className="text-[#FFD700] text-sm font-semibold uppercase tracking-wider">Correct</span>
                       <span className="text-2xl md:text-3xl font-bold text-[#FFD700] drop-shadow">{correctAnswers}/{totalQuestions}</span>
                     </div>
+                    <button
+                      onClick={() => togglePlayerDetails(player.name)}
+                      className={`ml-4 px-5 py-2 rounded-lg font-bold text-lg border-2 border-[#6B0D0D] bg-gradient-to-r from-[#FFD700] to-[#FFC300] text-[#8B0000]`}
+                      aria-expanded={showDetails[player.name]}
+                      aria-controls={`player-details-${index}`}
+                    >
+                      {showDetails[player.name] ? 'Hide Details' : 'Show Details'}
+                    </button>
                   </div>
-                </motion.div>
+                </div>
                 
                 {showDetails[player.name] && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="bg-[#8B0000] overflow-hidden"
+                  <div 
+                    className="bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] overflow-hidden"
                   >
                     <div className="p-4 md:p-6">
                       <h3 className="text-[#FFD700] font-bold mb-3 text-lg">Question-by-Question Performance</h3>
                       <div className="grid gap-4">
                         {gameData.questions?.map((question, qIndex) => {
-                          const playerAnswer = player.answers?.[qIndex] || "No answer";
+                          const playerAnswer = player.answers?.[qIndex];
                           const isCorrect = (player.questionScores?.[qIndex] || 0) > 0;
-                          const options = question.options;
+                          const options = question.options || [];
                           const correctAnswer = question.correctAnswer;
+                          const correctAnswers = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer];
+                          const isMultipleCorrect = Array.isArray(correctAnswer) && correctAnswer.length > 1;
                           const isOpenEnded = !options || options.length === 0;
+                          // For multiple correct, playerAnswer may be array or string
+                          const playerAnswersArr = Array.isArray(playerAnswer)
+                            ? playerAnswer
+                            : typeof playerAnswer === 'string' && playerAnswer.includes(',')
+                              ? playerAnswer.split(',').map(a => a.trim())
+                              : playerAnswer ? [playerAnswer] : [];
 
                           return (
-                            <div key={qIndex} className="bg-[#8B0000] p-3 rounded-lg mb-2">
+                            <div key={qIndex} className="bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] p-3 rounded-2xl mb-2 border border-[#6B0D0D]/30">
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1">
                                   <p className="text-[#FFD700] font-semibold mb-1">Q{qIndex + 1}: {question.question || JSON.stringify(question)}</p>
                                   {isOpenEnded ? (
                                     <div className="space-y-1 ml-2">
                                       <div className="text-[#FFD700]">
-                                        <span className="font-bold">Your answer:</span> {playerAnswer}
+                                        <span className="font-bold">Your answer:</span> {playerAnswer || <span className="italic text-[#FFD700]/70">No answer</span>}
                                       </div>
                                       <div className="text-[#FFD700]">
                                         <span className="font-bold">Correct answer{Array.isArray(correctAnswer) && correctAnswer.length > 1 ? 's' : ''}:</span> {Array.isArray(correctAnswer) ? correctAnswer.join(', ') : correctAnswer}
@@ -319,18 +320,21 @@ const LeaderboardPage = () => {
                                   ) : (
                                     <div className="space-y-1">
                                       {options.map((opt, i) => {
-                                        const isPlayer = playerAnswer === opt;
-                                        const isCorrectOpt = correctAnswer === opt || (Array.isArray(correctAnswer) && correctAnswer.includes(opt));
+                                        const isPlayer = playerAnswersArr.includes(opt);
+                                        const isCorrectOpt = correctAnswers.includes(opt);
+                                        // For single answer, use radio; for multiple, use checkbox
                                         return (
                                           <div
                                             key={i}
                                             className={`flex items-center gap-2 px-3 py-1 rounded-lg border-2 transition-all
-                                              ${isCorrectOpt ? 'border-[#FFD700] font-bold' : 'border-transparent'}
+                                              ${isCorrectOpt ? 'border-[#6B0D0D] font-bold' : 'border-transparent'}
                                               ${isPlayer ? 'bg-[#FFD700] text-[#8B0000] font-bold shadow' : 'text-[#FFD700]'}
                                             `}
                                           >
-                                            {isPlayer && (
-                                              <span className="inline-block w-4 h-4 mr-1 rounded-full bg-[#FFD700] border-2 border-[#8B0000]" />
+                                            {isMultipleCorrect ? (
+                                              <input type="checkbox" checked={isPlayer} readOnly className="form-checkbox h-5 w-5 text-[#FFD700] border-2 border-[#6B0D0D]" />
+                                            ) : (
+                                              <input type="radio" checked={isPlayer} readOnly className="form-radio h-5 w-5 text-[#FFD700] border-2 border-[#6B0D0D]" />
                                             )}
                                             <span>{opt}</span>
                                             {isCorrectOpt && (
@@ -339,84 +343,46 @@ const LeaderboardPage = () => {
                                           </div>
                                         );
                                       })}
+                                      {/* If player did not answer */}
+                                      {playerAnswersArr.length === 0 && (
+                                        <div className="text-[#FFD700]/70 italic mt-1">No answer selected</div>
+                                      )}
                                     </div>
                                   )}
-                                </div>
-                                <div className={`px-3 py-1 rounded-full ml-4 ${isCorrect ? 'bg-green-800 text-[#FFD700]' : 'bg-red-800 text-[#FFD700]'}`}
-                                >
-                                  {isCorrect ? 'Correct' : 'Incorrect'}
                                 </div>
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Summary Card with Pie Chart */}
-                <div className="flex flex-wrap items-center gap-8 px-6 py-4 bg-[#8B0000] border-b border-[#FFD700]">
-                  <div className="flex flex-col items-center bg-[#8B0000] rounded-2xl shadow-lg p-4 min-w-[180px] max-w-[220px] mx-auto" style={{boxShadow:'0 4px 24px 0 #FFD70022'}}>
-                    <h4 className="text-[#FFD700] font-bold mb-2 text-lg">Correct vs Incorrect</h4>
-                    <div className="w-[120px] h-[120px]">
-                      <Pie data={pieData} options={pieOptions} />
+                      <div className="flex flex-wrap items-center gap-8 px-6 py-4 bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] border-b border-[#FFD700] mt-8">
+                        <div className="flex flex-col items-center bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] rounded-2xl p-4 min-w-[180px] max-w-[220px] mx-auto">
+                          <h4 className="text-[#FFD700] font-bold mb-2 text-lg">Correct vs Incorrect</h4>
+                          <div className="w-[120px] h-[120px]">
+                            <Pie data={pieData} options={pieOptions} />
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-800 text-[#FFD700] font-bold text-lg">
+                          <svg className="w-5 h-5 text-[#FFD700]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          {correctAnswers} Correct
+                        </span>
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-800 text-[#FFD700] font-bold text-lg">
+                          <svg className="w-5 h-5 text-[#FFD700]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          {incorrectAnswers} Incorrect
+                        </span>
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FFD700]/20 text-[#FFD700] font-bold text-lg">
+                          <svg className="w-5 h-5 text-[#FFD700]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" /></svg>
+                          {accuracy}% Accuracy
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-800 text-[#FFD700] font-bold text-lg shadow-sm">
-                    <svg className="w-5 h-5 text-[#FFD700]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    {correctAnswers} Correct
-                  </span>
-                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-800 text-[#FFD700] font-bold text-lg shadow-sm">
-                    <svg className="w-5 h-5 text-[#FFD700]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    {incorrectAnswers} Incorrect
-                  </span>
-                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FFD700]/20 text-[#FFD700] font-bold text-lg shadow-sm">
-                    <svg className="w-5 h-5 text-[#FFD700]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" /></svg>
-                    {accuracy}% Accuracy
-                  </span>
-                </div>
-              </motion.div>
+                )}
+              </div>
             );
           })}
         </div>
-        
-        {gameData?.questions && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-[#FFD700] mb-6">Question Statistics</h2>
-            <div className="space-y-6">
-              {gameData.questions.map((question, index) => {
-                const stats = calculateQuestionStats(index);
-                
-                return (
-                  <div key={index} className="bg-[#8B0000] p-4 md:p-6 rounded-xl shadow-md border border-[#FFD700]">
-                    <h3 className="text-[#FFD700] font-bold text-lg mb-2">Q{index + 1}: {question.question}</h3>
-                    <p className="text-[#FFD700] mb-3">Correct answer: {question.correctAnswer}</p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[#FFD700]">
-                      <div className="bg-[#8B0000] p-3 rounded-lg">
-                        <p className="font-semibold">Correct Answers</p>
-                        <p>{stats.correctCount} ({((stats.correctCount / players.length) * 100).toFixed(1)}%)</p>
-                      </div>
-                      <div className="bg-[#8B0000] p-3 rounded-lg">
-                        <p className="font-semibold">Answer Distribution</p>
-                        <div className="mt-1 space-y-1">
-                          {Object.entries(stats.answerDistribution || {}).map(([answer, count]) => (
-                            <div key={answer} className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-[#FFD700]"></div>
-                              <span>{answer}: {count} ({(count / players.length * 100).toFixed(1)}%)</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </motion.div>
+      </div>
     </div>
   );
 };
