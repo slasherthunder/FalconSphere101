@@ -1,5 +1,5 @@
 "use client";
-import { db } from '@/app/components/firebase';
+import { db } from '@/components/firebase';
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
 import { ref, set, push } from "firebase/database";
 
@@ -103,7 +103,7 @@ export default function JoinGame() {
     if ( await checkIfSessionExists() == "cat"){
       console.log("Tacocat")
     }else{
-      setError("No sessions exist with that code")
+      setError("No sessions exist with that code. Ask your host to start the game.")
       return;
     }
 
