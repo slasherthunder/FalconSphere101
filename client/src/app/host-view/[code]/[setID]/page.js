@@ -447,12 +447,23 @@ const startGame = () => {
               </div>
             )}
             {isHost && clientAnnouncements.length > 0 && (
-              <div className="flex flex-col gap-1 w-full max-w-lg mx-auto mb-4">
-                {clientAnnouncements.map((a, idx) => (
-                  <div key={idx} className="bg-[#FFD700]/20 text-[#8B0000] rounded px-3 py-1 text-sm font-medium flex items-center gap-2">
-                    <span className="font-bold">{a.name}:</span> <span>{a.message}</span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-2 w-full max-w-lg mx-auto mb-4">
+                <AnimatePresence>
+                  {clientAnnouncements.map((a, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      transition={{ duration: 0.25 }}
+                      className="bg-gradient-to-r from-[#FFD700] to-[#F3B13B] text-[#8B0000] rounded-xl px-4 py-3 text-base font-bold flex items-center gap-3 shadow-lg border-2 border-[#FFD700]/70 mb-1"
+                    >
+                      <span className="text-2xl" role="img" aria-label="Player">💬</span>
+                      <span className="font-extrabold text-[#8B0000]">{a.name}:</span>
+                      <span className="font-semibold text-[#8B0000]">{a.message}</span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             )}
             <h3 className="text-[#FFD700] text-2xl font-bold mb-6 tracking-wide">Players</h3>
