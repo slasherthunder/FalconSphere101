@@ -183,7 +183,7 @@ const LeaderboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#8C1515] p-4 md:p-8">
+    <div className="min-h-screen bg-white p-4 md:p-8">
       <div
         className="max-w-4xl mx-auto bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] p-6 md:p-8 rounded-3xl border-2 border-[#6B0D0D]"
       >
@@ -290,7 +290,7 @@ const LeaderboardPage = () => {
                       <div className="grid gap-4">
                         {gameData.questions?.map((question, qIndex) => {
                           const playerAnswer = player.answers?.[qIndex];
-                          const isCorrect = (player.questionScores?.[qIndex] || 0) > 0;
+                        const isCorrect = (player.questionScores?.[qIndex] || 0) > 0;
                           const options = question.options || [];
                           const correctAnswer = question.correctAnswer;
                           const correctAnswers = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer];
@@ -303,10 +303,10 @@ const LeaderboardPage = () => {
                               ? playerAnswer.split(',').map(a => a.trim())
                               : playerAnswer ? [playerAnswer] : [];
 
-                          return (
+                        return (
                             <div key={qIndex} className="bg-gradient-to-br from-[#8C1515] to-[#6B0D0D] p-3 rounded-2xl mb-2 border border-[#6B0D0D]/30">
                               <div className="flex justify-between items-start mb-2">
-                                <div className="flex-1">
+                              <div className="flex-1">
                                   <p className="text-[#FFD700] font-semibold mb-1">Q{qIndex + 1}: {question.question || JSON.stringify(question)}</p>
                                   {isOpenEnded ? (
                                     <div className="space-y-1 ml-2">
@@ -348,8 +348,8 @@ const LeaderboardPage = () => {
                                         <div className="text-[#FFD700]/70 italic mt-1">No answer selected</div>
                                       )}
                                     </div>
-                                  )}
-                                </div>
+                                )}
+                              </div>
                               </div>
                             </div>
                           );
@@ -378,11 +378,11 @@ const LeaderboardPage = () => {
                     </div>
                   </div>
                 )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
     </div>
   );
 };
