@@ -20,7 +20,8 @@ import {
   FaTrophy,
   FaMedal,
   FaStar,
-  FaArrowLeft
+  FaArrowLeft,
+  FaVolumeUp
 } from "react-icons/fa";
 
 // Add animation variants
@@ -52,6 +53,17 @@ const buttonVariants = {
     }
   },
   tap: { scale: 0.95 }
+};
+
+// Text-to-Speech utility
+const speakText = (text, opts = {}) => {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel(); // Stop any ongoing speech
+  const utterance = new window.SpeechSynthesisUtterance(text);
+  utterance.rate = opts.rate || 1;
+  utterance.pitch = opts.pitch || 1;
+  utterance.lang = opts.lang || "en-US";
+  window.speechSynthesis.speak(utterance);
 };
 
 export default function StudySet() {
@@ -679,33 +691,64 @@ export default function StudySet() {
               </div>
 
             {selectedMode === "Flashcards" ? (
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                onClick={toggleFlashcard}
-                className="cursor-pointer bg-gradient-to-br from-[#700000] to-[#600000] p-8 rounded-xl shadow-lg"
-              >
+              <>
+                <div className="flex items-center justify-center mb-4">
+                  {/* No TTS button for flashcard question, as the question is hidden until flipped. */}
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  onClick={toggleFlashcard}
+                  className="cursor-pointer bg-gradient-to-br from-[#700000] to-[#600000] p-8 rounded-xl shadow-lg"
+                >
+                  <motion.h3
+                    className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide text-center"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    {showAnswer ? currentQuestion.correctAnswer : (
+                      <span className="flex items-center justify-center gap-2">
+                        {currentQuestion.question}
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            speakText(currentQuestion.question);
+                          }}
+                          className="ml-2 p-2 rounded-full bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition"
+                          aria-label="Read question"
+                          title="Read question"
+                        >
+                          <FaVolumeUp className="h-5 w-5" />
+                        </button>
+                      </span>
+                    )}
+                  </motion.h3>
+                  <p className="text-[#FFD700] text-lg text-center">
+                    {showAnswer ? "Click to show question" : "Click to show answer"}
+                  </p>
+                </motion.div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center mb-4"></div>
                 <motion.h3
                   className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide text-center"
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 }}
                 >
-                  {showAnswer ? currentQuestion.correctAnswer : currentQuestion.question}
+                  <span className="flex items-center justify-center gap-2">
+                    {currentQuestion.question}
+                    <button
+                      onClick={() => speakText(currentQuestion.question)}
+                      className="ml-2 p-2 rounded-full bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition"
+                      aria-label="Read question"
+                      title="Read question"
+                    >
+                      <FaVolumeUp className="h-5 w-5" />
+                    </button>
+                  </span>
                 </motion.h3>
-                <p className="text-[#FFD700] text-lg text-center">
-                  {showAnswer ? "Click to show question" : "Click to show answer"}
-                </p>
-              </motion.div>
-            ) : (
-              <>
-              <motion.h3
-                  className="text-3xl text-[#FFD700] font-bold mb-6 tracking-wide text-center"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                  {currentQuestion.question}
-              </motion.h3>
 
                 {currentQuestion.imageData && (
                 <motion.div
@@ -971,7 +1014,17 @@ export default function StudySet() {
                   className="text-[#FFD700] text-xl font-semibold tracking-wide"
                   whileHover={{ scale: 1.01 }}
                 >
-                  {currentSlide.question || "Question:"}
+                  <span className="flex items-center gap-2">
+                    {currentSlide.question || "Question:"}
+                    <button
+                      onClick={() => speakText(currentSlide.question || "Question")}
+                      className="p-2 rounded-full bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition"
+                      aria-label="Read question"
+                      title="Read question"
+                    >
+                      <FaVolumeUp className="h-5 w-5" />
+                    </button>
+                  </span>
                 </motion.div>
                 {currentSlide.imageData && (
                   <motion.div
@@ -998,8 +1051,16 @@ export default function StudySet() {
                           : "border-[#FFD700] bg-gradient-to-r from-[#700000] to-[#600000]"
                       } shadow-lg`}
                     >
-                      <span className="ml-4 text-[#FFD700] text-lg">
+                      <span className="ml-4 text-[#FFD700] text-lg flex items-center gap-2">
                         {option || `Option ${index + 1}`}
+                        <button
+                          onClick={() => speakText(option)}
+                          className="p-2 rounded-full bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition"
+                          aria-label="Read answer choice"
+                          title="Read answer choice"
+                        >
+                          <FaVolumeUp className="h-5 w-5" />
+                        </button>
                       </span>
                     </motion.div>
                   ))}
@@ -1015,8 +1076,16 @@ export default function StudySet() {
                           : "border-[#FFD700] bg-gradient-to-r from-[#700000] to-[#600000]"
                       } shadow-lg`}
                     >
-                      <span className="ml-4 text-[#FFD700] text-lg">
+                      <span className="ml-4 text-[#FFD700] text-lg flex items-center gap-2">
                         {option || `Option ${index + 1}`}
+                        <button
+                          onClick={() => speakText(option)}
+                          className="p-2 rounded-full bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition"
+                          aria-label="Read answer choice"
+                          title="Read answer choice"
+                        >
+                          <FaVolumeUp className="h-5 w-5" />
+                        </button>
                       </span>
                     </motion.div>
                   ))}
@@ -1082,6 +1151,22 @@ export default function StudySet() {
                   <label className="block text-[#FFD700] text-lg font-medium mb-3 tracking-wide">
                     {currentSlide.questionType === "multipleCorrect" ? "Correct Answers:" : 
                      currentSlide.questionType === "openEnded" ? "Sample Answers:" : "Correct Answer:"}
+                    <button
+                      onClick={() => {
+                        if (currentSlide.questionType === "multipleCorrect" && currentSlide.correctAnswers) {
+                          speakText(currentSlide.correctAnswers.join('. '));
+                        } else if (currentSlide.questionType === "openEnded" && currentSlide.sampleAnswers) {
+                          speakText(currentSlide.sampleAnswers.join('. '));
+                        } else if (currentSlide.correctAnswer) {
+                          speakText(currentSlide.correctAnswer);
+                        }
+                      }}
+                      className="ml-2 p-2 rounded-full bg-[#FFD700] text-[#8B0000] hover:bg-[#FFC300] transition"
+                      aria-label="Read correct answer"
+                      title="Read correct answer"
+                    >
+                      <FaVolumeUp className="h-5 w-5" />
+                    </button>
                   </label>
                   {currentSlide.questionType === "multipleCorrect" ? (
                     <div className="space-y-2">
