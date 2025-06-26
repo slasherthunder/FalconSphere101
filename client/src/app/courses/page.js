@@ -31,7 +31,7 @@ export default function CourseBrowser() {
 
   const handleExplore = (title) => {
     const urlSlug = title.replace(/\s+/g, "-");
-    router.push(`/courses/${urlSlug}`);
+    router.push(`/course/${urlSlug}`);
   };
 
   return (

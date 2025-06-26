@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { FaChevronDown, FaChevronUp, FaBook, FaGraduationCap, FaLightbulb } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
+
 
 const CoursePage = () => {
     const [expandedUnits, setExpandedUnits] = useState({});
@@ -17,6 +19,7 @@ const CoursePage = () => {
         studySet: false
     });
     const [isGenerating, setIsGenerating] = useState(false);
+    const router = useRouter();
 
     // Sample course data - replace with actual data
     const courseData = {
@@ -96,22 +99,22 @@ const CoursePage = () => {
 
     const handleGenerate = () => {
         const hasSelectedTools = Object.values(selectedTools).some(tool => tool);
-        if (!hasSelectedTools) {
-            return;
-        }
+        if (!hasSelectedTools) return;
+
         setIsGenerating(true);
-        // Simulate generation process
+
         setTimeout(() => {
+            const quizId = Math.floor(100000000 + Math.random() * 900000000).toString(); // 9-digit
             setIsGenerating(false);
             setShowGenerateModal(false);
-            // Reset selections
             setSelectedTools({
                 studyGuide: false,
                 practiceQuestions: false,
                 practiceTest: false,
                 studySet: false
             });
-        }, 3000);
+            router.push(`/Practice-Set-Dynamic-Page/${quizId}`);
+        }, 2000); // Simulate generation time
     };
 
     const hasSelectedTools = Object.values(selectedTools).some(tool => tool);

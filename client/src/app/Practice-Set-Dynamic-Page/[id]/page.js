@@ -64,8 +64,10 @@ const QuizPage = () => {
       updatedCorrect[currentQ] = true;
       setCorrectAnswers(updatedCorrect);
     } else {
+      if (updatedGuesses[currentQ] === 1) {
+        setShowHint(true);
+      }
       setShake(true);
-      setShowHint(true);
       setTimeout(() => setShake(false), 500);
     }
 
@@ -102,24 +104,36 @@ const QuizPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-6 shadow-xl border border-[#FFD700]/20"
+            className={`bg-[#700000]/90 rounded-2xl p-6 shadow-xl border border-[#FFD700]/20 ${shake ? 'animate-shake' : ''}`}
           >
-            <h2 className="text-3xl font-bold text-center mb-4 text-[#8B0000]">
+            <h2 className="text-3xl font-bold text-center mb-4 text-white">
               Quiz Complete
             </h2>
-            <p className="text-xl text-center mb-6">
+            <p className="text-xl text-center mb-6 text-white" >
               Your Score: {score} / {questions.length}
             </p>
-            <div className="flex justify-center gap-4 mt-8">
+            <div className="space-y-4">
+              {questions.map((question, i) => (
+                <div key={i} className="bg-[#FFF8E1] p-4 rounded-xl border border-[#FFD700]/30">
+                  <p className="font-semibold mb-2 text-[#8B0000]">
+                    Q{i + 1}: {question.question}
+                  </p>
+                  <p className="text-green-700">
+                    Correct Answer: {question.options[question.correctIndex]}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex gap-4 justify-center ">
               <button
                 onClick={resetQuiz}
-                className="bg-[#8B0000] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#a32121]"
+                className="bg-[#FFD700] text-[#8B0000] px-4 py-2 rounded-lg hover:bg-[#fae8e1]"
               >
                 Retake Quiz
               </button>
               <button
                 onClick={() => router.push(`/courses/${id}`)}
-                className="bg-[#FFD700] text-[#8B0000] px-5 py-2 rounded-lg font-semibold hover:bg-[#ffea7d]"
+                className="border border-[#FFD700] text-[#FFD700] px-4 py-2 rounded-lg hover:bg-[#fae8e1]"
               >
                 Back to Course
               </button>
@@ -143,10 +157,12 @@ const QuizPage = () => {
               {q.options.map((option, index) => {
                 let base = "w-full text-left px-4 py-2 rounded-xl border text-lg transition-all duration-200";
                 let color = "border-white hover:bg-white/10";
-                if (selected !== null) {
+                if (guesses[currentQ] === 2 || correctAnswers[currentQ]) {
                   if (index === q.correctIndex) color = "bg-green-800 border-green-400";
                   else if (index === selected) color = "bg-red-800 border-red-400";
                   else color = "opacity-60 border-white";
+                } else if (selected === index) {
+                  color = "bg-red-800 border-red-400";
                 }
                 return (
                   <button
