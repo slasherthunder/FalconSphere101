@@ -11,13 +11,19 @@ export default function OllamaChatPage() {
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [questionsList, setQuestionsList] = useState([])
+  const [answersList, setAnswersList] = useState([])
+  const [explainationList, setExplanationList] = useState([])
+  const [problemData, setProblemData] = useState({})
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setResponse('');
 
-    const updated = [...questionsList];
+    const updatedQuestions = [...questionsList];
+    const updatedAnswers = [...answersList];
+    const updatedExplanations = [...explainationList];
 
 
     for (let i = 1; i < 4; i++){
@@ -30,53 +36,68 @@ export default function OllamaChatPage() {
       let data = await res.json();
       setResponse(data.response || 'No response.');
 
-      const tempResponse = data.response
+      const question = data.response
 
-      updated.push(tempResponse)
+      updatedQuestions.push(question)
 
 
 
        res = await fetch('/api/ollama', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: 'answer: ' + tempResponse }),
+        body: JSON.stringify({ prompt: 'answer: ' + question }),
       });
   
       data = await res.json();
       setResponse(data.response || 'No response.');
+
+      const answer = data.response
+      updatedAnswers.push(answer)
 
       res = await fetch('/api/ollama', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: 'explain: ' + tempResponse }),
+        body: JSON.stringify({ prompt: 'explain: ' + question }),
+        
       });
+
   
       data = await res.json();
       setResponse(data.response || 'No response.');
 
 
-
+      const explanation = data.response
+      updatedExplanations.push(explanation)
 
     };
 
-    setQuestionsList(updated)
+    setQuestionsList(updatedQuestions)
+    setAnswersList(updatedAnswers)
+    setExplanationList(updatedExplanations)
 
 
     setLoading(false);
+    setProblemData(
+      {
+        questions: updatedQuestions,
+        answers: updatedAnswers,
+        explanations: updatedExplanations
+      }
+    )
 
     // updateFireBase()
   };
 
   useEffect(() => {
-    console.log('Updated items:', questionsList);
+    console.log('Updated items:', problemData);
     updateFireBase()
-  }, [questionsList]); // dependency array: triggers when 'items' changes
+  }, [problemData]); // dependency array: triggers when 'items' changes
 
 
 
   const updateFireBase = async () => {
 
-      const id = await addToAIData({item: questionsList});
+      const id = await addToAIData({item: problemData});
       alert(`Document added with ID: ${id}`);
 
   };
