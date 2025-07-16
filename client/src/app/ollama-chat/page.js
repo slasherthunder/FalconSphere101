@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState , useEffect} from 'react';
 import { addToAIData } from '../../../AI-Functions';
+import { update } from 'firebase/database';
 
 
 
@@ -9,56 +10,75 @@ export default function OllamaChatPage() {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
+  const [questionsList, setQuestionsList] = useState([])
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setResponse('');
 
-    const res = await fetch('/api/ollama', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
+    const updated = [...questionsList];
 
-    const data = await res.json();
-    setResponse(data.response || 'No response.');
+
+    for (let i = 1; i < 4; i++){
+      let res = await fetch('/api/ollama', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'question: Module ' + i }),
+      });
+  
+      let data = await res.json();
+      setResponse(data.response || 'No response.');
+
+      const tempResponse = data.response
+
+      updated.push(tempResponse)
+
+
+
+       res = await fetch('/api/ollama', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'answer: ' + tempResponse }),
+      });
+  
+      data = await res.json();
+      setResponse(data.response || 'No response.');
+
+      res = await fetch('/api/ollama', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'explain: ' + tempResponse }),
+      });
+  
+      data = await res.json();
+      setResponse(data.response || 'No response.');
+
+
+
+
+    };
+
+    setQuestionsList(updated)
+
+
     setLoading(false);
+
+    // updateFireBase()
   };
 
+  useEffect(() => {
+    console.log('Updated items:', questionsList);
+    updateFireBase()
+  }, [questionsList]); // dependency array: triggers when 'items' changes
 
 
 
   const updateFireBase = async () => {
-    try {
-      const obj = {
-        questions: [
-          "Solve for x in the equation 2x + 4 = 12",
-          "Simplify using distributive property: -3(2y - 7)",
-          "Graph on number line the inequality y > 5",
-          "Find all values of a that satisfy |a| < 9",
-          "Write standard form Ax + By = C for the equation given by slope-intercept form y = (1/2)x - 3"
-        ],
-        answers: [
-          "x = 4",
-          "-6y + 21", 
-          "[All values greater than 5 on a number line]", 
-          "-9 < a < 9", 
-          "x - 2y = -6"
-        ],
-        reasoning: [
-          "Subtract 4 from both sides, then divide by 2 to solve for x.",
-          "Distribute the negative sign inside parentheses and simplify.",
-          "The inequality is already solved; graphing it shows all values greater than but not including 5 as part of its solution set on a number line (open circle at y=5).",
-          "Take absolute value into account, this means finding an interval.",
-          "Rearrange to standard form by moving x and y terms."
-        ]
-      };
-      const id = await addToAIData(obj);
+
+      const id = await addToAIData({item: questionsList});
       alert(`Document added with ID: ${id}`);
-    } catch (error) {
-      alert('Failed to add document.');
-    }
+
   };
 
 
@@ -77,7 +97,7 @@ export default function OllamaChatPage() {
           required
         />
         <button
-          onClick={updateFireBase}
+          // onClick={updateFireBase}
           type="submit"
           disabled={loading}
           style={{ marginTop: '10px', padding: '10px 20px', fontSize: '16px' }}
