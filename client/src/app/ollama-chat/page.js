@@ -30,7 +30,7 @@ export default function OllamaChatPage() {
       let res = await fetch('/api/ollama', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: 'question: Module ' + i }),
+        body: JSON.stringify({ prompt: 'question: ' + prompt }),
       });
   
       let data = await res.json();
